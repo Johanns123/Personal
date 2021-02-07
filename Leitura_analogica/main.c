@@ -34,6 +34,8 @@ TACQ = 4 * TDA = 3.2us
 
 tempo de conv = 11*TDA + TACQ = 12us*/
 
+//esse código faz a leitura de 6 entradas analógicas
+
 #define led1 RD7
 #define led2 RD6
 #define led3 RD5
@@ -112,60 +114,66 @@ int conversao_AD6(void){
 void main(void) {
     //código de conversão AD usando trimpot
     TRISD = 0x00;
-    TRISA = 0x03;
-    ADCON1 = 0b00001001; // --> 1110 determina somente RA0 até RA5 como analógico
+    TRISA = 0b00101111; //determina os pino RA0 até RA3 e RA5 como entrada
+    TRISEbits.RE0 = 1;  //determina RE como entrada
+    ADCON1 = 0b00001001; // --> 1001 determina somente AN0 até AN5 como analógico
     ADCON2 = 0b10010101; //para obter esses valores recorra ao datasheet e às informações acima
-    CMCON = 7;
+    CMCON = 7; //desabilita os comparadores
     PORTA = 0x00;
     PORTD = 0x00; // todos os leds desligados
     
     while(1){
-        leitura1 = conversao_AD1();
-       
-        leitura2 = conversao_AD2();       
         
-        leitura3 = conversao_AD3();       
-              
+        leitura1 = conversao_AD1(); //pega a função que faz a conversão AD do AN1
+        leitura2 = conversao_AD2(); 
+        leitura3 = conversao_AD3();
         leitura4 = conversao_AD4();
-     
         leitura5 = conversao_AD5();
-                       
         leitura6 = conversao_AD6();
         
-        if(leitura1 > 0 && leitura1 <= 200){
+        
+        if(leitura1 >= 0 && leitura1 <= 200){
             led1 = 1;
         }
-        else if(leitura1 > 220 && leitura1 < 1023){
+        else if(leitura1 > 200){
             led1 = 0;
         }
-        if(leitura2 > 0 && leitura2 <= 200){
+        
+        
+        if(leitura2 >= 0 && leitura2 <= 200){
             led2 = 1;
         }
-        else if(leitura2 > 220 && leitura2 < 1023){
+        else if(leitura2 > 200){
             led2 = 0;
         }
-        if(leitura3 > 0 && leitura3 <= 200){
+
+        if(leitura3 >= 0 && leitura3 <= 200){
             led3 = 1;
         }
-        else if(leitura3 > 220 && leitura3 < 1023){
+        else if(leitura3 > 200){
             led3 = 0;
         }
-        if(leitura4 > 0 && leitura4 <= 200){
+        
+        
+        if(leitura4 >= 0 && leitura4 <= 200){
             led4 = 1;
         }
-        else if(leitura4 > 220 && leitura4 < 1023){
+        else if(leitura4 > 200){
             led4 = 0;
         }
-        if(leitura5 > 0 && leitura5 <= 200){
+   
+        if(leitura5 >= 0 && leitura5 <= 200){
             led5 = 1;
         }
-        else if(leitura5 > 220 && leitura5 < 1023){
+        else if(leitura5 > 200){
             led5 = 0;
         }
-        if(leitura6 > 0 && leitura6 <= 200){
+
+        
+        if(leitura6 >= 0 && leitura6 <= 200){
             led6 = 1;
         }
-        else if(leitura6 > 220 && leitura6 < 1023){
+        else if(leitura6 > 200){
             led6 = 0;
         }
     }
