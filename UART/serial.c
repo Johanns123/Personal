@@ -17,19 +17,19 @@
    For e-mail suggestions :  lcgamboa@yahoo.com
    ######################################################################## */
 
-//#include <xc.h>
-//#include"serial.h"
-//#include <pic18F4550.h>
+#include <xc.h>
 //#include "configbit.txt"
+//#include <pic18F4550.h>
+#define _XTAL_FREQ 20000000 //Frequencia em 20MHz
 
 void serial_init(void)
 {
-    //SPBRG=129; //baud rate de 9600 - FOSC=20MHz 
+    SPBRG=129; //baud rate de 9600 - FOSC=20MHz 
                //baud rate de 4800  - FOSC=8MHz   brgh=1 baud=FOSC/16(X+1)
                //                                 brgh=0 baud=FOSC/64(X+1)
         
 	//Configuracao da serial
-    /*TXSTAbits.TX9=0;    //transmissao em 8 bits
+    TXSTAbits.TX9=0;    //transmissao em 8 bits
     TXSTAbits.TXEN=1;  //habilita transmissao
     TXSTAbits.SYNC=0;  //modo assincrono
     TXSTAbits.BRGH=1;  //high baud rate
@@ -42,7 +42,7 @@ void serial_init(void)
 
 
 
-/*void serial_tx(unsigned char val)
+void serial_tx(unsigned char val)
 {
   TXREG=val;
   while(!TXSTAbits.TRMT);
@@ -57,9 +57,9 @@ void serial_tx_str(const char* val)
     serial_tx(val[i]);
     i++; 
   }
-}*/
+}
 
-/*unsigned char serial_rx(unsigned int timeout)
+unsigned char serial_rx(unsigned int timeout)
 {
   unsigned int to=0;
 
