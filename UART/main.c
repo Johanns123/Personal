@@ -22,7 +22,7 @@
 #define led3 RD7
 #define botao RC0
 
-
+//código de leitura dos sensores frontais da forma mais rudementar possível
 
 int conversao_AD1(void){
     int conversao;
@@ -125,33 +125,23 @@ void main(void) {
         leitura6 = conversao_AD6();
         
         sprintf(txt,"%i", leitura1);  //converte inteiro para string
-        serial_tx_str(txt);
-        serial_tx(10);
-        serial_tx(13);
-        
-        sprintf(txt2,"%i", leitura2);  //converte inteiro para string
-        serial_tx_str(txt2);
-        serial_tx(10);
-        serial_tx(13);
-        
-        sprintf(txt3,"%i", leitura3);  //converte inteiro para string
-        serial_tx_str(txt3);
-        serial_tx(10);
-        serial_tx(13);
-        
+        sprintf(txt2,"%i", leitura2);
+        sprintf(txt3,"%i", leitura3);
         sprintf(txt4,"%i", leitura4);  //converte inteiro para string
-        serial_tx_str(txt4);
-        serial_tx(10);
-        serial_tx(13);
-        
         sprintf(txt5,"%i", leitura5);  //converte inteiro para string
-        serial_tx_str(txt5);
-        serial_tx(10);
-        serial_tx(13);
-        
         sprintf(txt6,"%i", leitura6);  //converte inteiro para string
+
+        serial_tx_str(txt);  //imprime na tela a string do valor de 0 1023
+        serial_tx(32);       //gera espaço
+        serial_tx_str(txt2);
+        serial_tx(32); 
+        serial_tx_str(txt3);
+        serial_tx(32); 
+        serial_tx_str(txt4);
+        serial_tx(32); 
+        serial_tx_str(txt5);
+        serial_tx(32); 
         serial_tx_str(txt6);
-        serial_tx(10);
         serial_tx(13);
         __delay_ms(300);
         
