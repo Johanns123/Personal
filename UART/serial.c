@@ -77,5 +77,5 @@ unsigned char serial_rx(unsigned int timeout)
   if(PIR1bits.RCIF)
     return RCREG;
   else
-    return 0xA5;
+    return 0xA5; //Devolve um valor da tabela ASCII caso ocorra erro
 }
