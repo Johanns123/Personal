@@ -10,6 +10,8 @@
 #include <xc.h>
 #include <stdio.h>
 #include "serial.h"
+#include <stdlib.h>
+#include <string.h>
 //#include <pic18F4550.h>
 
 #define _XTAL_FREQ 20000000 //Frequencia em 20MHz
@@ -20,9 +22,88 @@
 #define led3 RD7
 #define botao RC0
 
+
+
+int conversao_AD1(void){
+    int conversao;
+    ADCON0 = 0b00000001;// Seleciona canal AN0
+    ADCON0bits.GO=1; // inicia a conversão
+    while (ADCON0bits.GO); // Aguarda a o fim da conversão
+    conversao = (ADRESL + (ADRESH << 8));
+    return conversao;
+    
+}
+
+
+int conversao_AD2(void){
+    int conversao2;
+    ADCON0 = 0b00000101;// Seleciona canal AN1
+    ADCON0bits.GO=1; // inicia a conversão
+    while (ADCON0bits.GO); // Aguarda a o fim da conversão
+    conversao2 = ADRESL + (ADRESH << 8);
+    return conversao2;
+}
+
+int conversao_AD3(void){
+    int conversao3;
+    ADCON0 = 0b00001001;// Seleciona canal AN2
+    ADCON0bits.GO=1; // inicia a conversão
+    while (ADCON0bits.GO); // Aguarda a o fim da conversão
+    conversao3 = ADRESL + (ADRESH << 8);
+    return conversao3;
+    
+}
+
+int conversao_AD4(void){
+    int conversao4;
+    ADCON0 = 0b00001101;// Seleciona canal AN3
+    ADCON0bits.GO=1; // inicia a conversão
+    while (ADCON0bits.GO); // Aguarda a o fim da conversão
+    conversao4 = ADRESL + (ADRESH << 8);
+    return conversao4;
+
+}
+
+int conversao_AD5(){
+    int conversao5;
+    ADCON0 = 0b00010001;// Seleciona canal AN4
+    ADCON0bits.GO=1; // inicia a conversão
+    while (ADCON0bits.GO); // Aguarda a o fim da conversão
+    conversao5 = ADRESL + (ADRESH << 8);
+    return conversao5;
+
+}
+
+int conversao_AD6(void){
+    int conversao6;
+    ADCON0 = 0b00010101;// Seleciona canal AN5
+    ADCON0bits.GO=1; // inicia a conversão
+    while (ADCON0bits.GO); // Aguarda a o fim da conversão
+    conversao6 = ADRESL + (ADRESH << 8);
+    return conversao6;
+
+}
+
 char uart_rd;
+int leitura1 = 0;
+int leitura2 = 0;
+int leitura3 = 0;
+int leitura4 = 0;
+int leitura5 = 0;
+int leitura6 = 0;
+char txt[7];
+char txt2[7];
+char txt3[7];
+char txt4[7];
+char txt5[7];
+char txt6[7];
+
 
 void main(void) {
+    TRISAbits.RA0 = 0x01;
+    PORTA = 0x00;
+    ADCON1 = 0b00001001;
+    ADCON2 = 0b10010101;
     TRISD = 0x00;
     CMCON = 0x07;
     TRISCbits.RC0 = 0x01;
@@ -36,9 +117,46 @@ void main(void) {
     
     
     while(1){
-
-        uart_rd = serial_rx(100);
-        if (uart_rd != 0xA5) serial_tx(uart_rd);
+        leitura1 = conversao_AD1();
+        leitura2 = conversao_AD2();
+        leitura3 = conversao_AD3();
+        leitura4 = conversao_AD4();
+        leitura5 = conversao_AD5();
+        leitura6 = conversao_AD6();
+        
+        sprintf(txt,"%i", leitura1);  //converte inteiro para string
+        serial_tx_str(txt);
+        serial_tx(10);
+        serial_tx(13);
+        
+        sprintf(txt2,"%i", leitura2);  //converte inteiro para string
+        serial_tx_str(txt2);
+        serial_tx(10);
+        serial_tx(13);
+        
+        sprintf(txt3,"%i", leitura3);  //converte inteiro para string
+        serial_tx_str(txt3);
+        serial_tx(10);
+        serial_tx(13);
+        
+        sprintf(txt4,"%i", leitura4);  //converte inteiro para string
+        serial_tx_str(txt4);
+        serial_tx(10);
+        serial_tx(13);
+        
+        sprintf(txt5,"%i", leitura5);  //converte inteiro para string
+        serial_tx_str(txt5);
+        serial_tx(10);
+        serial_tx(13);
+        
+        sprintf(txt6,"%i", leitura6);  //converte inteiro para string
+        serial_tx_str(txt6);
+        serial_tx(10);
+        serial_tx(13);
+        __delay_ms(300);
+        
+        //uart_rd = serial_rx(100);
+        /*if (uart_rd != 0xA5) serial_tx(uart_rd);
         switch(uart_rd){
             case 'a':
                 serial_tx(13);
@@ -84,7 +202,7 @@ void main(void) {
             serial_tx_str("Botão pressionado");
             serial_tx(10);
             serial_tx(13);
-        }
+        }*/
         
     }
     
