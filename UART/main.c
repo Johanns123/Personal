@@ -5,6 +5,7 @@
  * Created on February 8, 2021, 2:54 PM
  */
 
+//código de leitura dos sensores frontais da forma mais rudementar possível
 
 #include "configbit.txt" //configurações dos bits
 #include <xc.h>
@@ -21,8 +22,6 @@
 #define led2 RD6
 #define led3 RD7
 #define botao RC0
-
-//código de leitura dos sensores frontais da forma mais rudementar possível
 
 int conversao_AD1(void){
     int conversao;
@@ -92,12 +91,12 @@ int leitura4 = 0;
 int leitura5 = 0;
 int leitura6 = 0;
 char txt[7];
-char txt2[7];
-char txt3[7];
+char txt2[7]; //variáveis que enviam valores de leitura
+/*char txt3[7];
 char txt4[7];
 char txt5[7];
-char txt6[7];
-
+char txt6[7];*/
+int contador = 0;
 
 void main(void) {
     TRISAbits.RA0 = 0x01;
@@ -117,6 +116,8 @@ void main(void) {
     
     
     while(1){
+        
+        //-----leitura utilizando vetores-------//
         leitura1 = conversao_AD1();
         leitura2 = conversao_AD2();
         leitura3 = conversao_AD3();
@@ -124,7 +125,26 @@ void main(void) {
         leitura5 = conversao_AD5();
         leitura6 = conversao_AD6();
         
-        sprintf(txt,"%i", leitura1);  //converte inteiro para string
+        int vetor_leituras [] = {leitura1, leitura2, leitura3, leitura4, leitura5, leitura6};
+        
+        for(int i = 0; i < 6; i++){
+            serial_tx_str("sensor");
+            sprintf(txt2, "%i", (contador + 1));
+            serial_tx_str(txt2);
+            serial_tx_str(":");
+            serial_tx(32);       //gera espaço
+            sprintf(txt, "%i", vetor_leituras[i]); //converter de inteiro para string a leitura do sensor na posição i
+            serial_tx_str(txt);
+            serial_tx(32);       //gera espaço
+            contador++;
+        }
+        serial_tx(13); //quebra de linha
+        contador = 0;
+        __delay_ms(100);
+        
+        
+        //----------Outra forma de leitura--------//
+        /*sprintf(txt,"%i", leitura1);  //converte inteiro para string
         sprintf(txt2,"%i", leitura2);
         sprintf(txt3,"%i", leitura3);
         sprintf(txt4,"%i", leitura4);  //converte inteiro para string
@@ -134,7 +154,7 @@ void main(void) {
         serial_tx_str(txt);  //imprime na tela a string do valor de 0 1023
         serial_tx(32);       //gera espaço
         serial_tx_str(txt2);
-        serial_tx(32); 
+        serial_tx(32);       //gera espaço entre as leituras para que as leituras sejam expressas como se fossem em paralelas
         serial_tx_str(txt3);
         serial_tx(32); 
         serial_tx_str(txt4);
@@ -143,10 +163,15 @@ void main(void) {
         serial_tx(32); 
         serial_tx_str(txt6);
         serial_tx(13);
-        __delay_ms(300);
+        __delay_ms(300);*/
         
-        //uart_rd = serial_rx(100);
-        /*if (uart_rd != 0xA5) serial_tx(uart_rd);
+        
+        
+        
+        //Área em que o terminal envia um comando para o PIC,
+        //sugestão de utilizar os códigos em situações diferentes
+        uart_rd = serial_rx(100);
+        if (uart_rd != 0xA5) serial_tx(uart_rd);
         switch(uart_rd){
             case 'a':
                 serial_tx(13);
@@ -192,7 +217,7 @@ void main(void) {
             serial_tx_str("Botão pressionado");
             serial_tx(10);
             serial_tx(13);
-        }*/
+        }
         
     }
     
