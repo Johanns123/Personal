@@ -602,24 +602,27 @@ void changeCount(){
 
 }*/
 
-int counter = 0x00;
+/*int counter = 0x00;
 
 void __interrupt() isr(void)      //vetor de interrupção
 {
     if(INTCONbits.TMR0IF){          //Testando se houve estouro no Timer0
         counter++;                  //Incrementa o counter
-        TMR0 = 0x00;                //Reinicia o registrador Timer0
-        INTCONbits.TMR0IF = 0x00;   //limpa a flag para a próxima interrupção
+        TMR0 = 0x06;                //Reinicia o registrador Timer0
         
-        /*if(counter == 2500){  //22ms /100 = 0,22ms = 220us
+        if(counter == 2434){            //ciclo de máquina = 1/(Freq. /4 ) = 0,200271us
+                                         //a cada 0,200271us * 4 * 250 = 0,200271ms --tempo para incrementar no counter
+                                        //0,200271 * 4 * 256 * 2438 = 500ms (valor real)
+                                        //contador = 2434 --> 500ms(valor do osciloscópio)
             RB4 = ~RB4;
-            counter = 0;
-        }*/
-    
+            counter = 0x00;
+        }
+        INTCONbits.TMR0IF = 0x00;   //limpa a flag para a próxima interrupção
+
     }
 
 }
-
+*/
 
 void aula16(){
     //-------------Região dos registradores do TIMER0---------------//
@@ -638,22 +641,196 @@ void aula16(){
     INTCONbits.PEIE = 0x01;            //Habilita a interrupção por periféricos
     INTCONbits.TMR0IE = 0x01;          //Habilita ainterrupção por estouro do Timer0
     
-    TMR0 = 0x12;                        //inicia a contagem em 12
+    TMR0 = 0x06;                        //inicia a contagem em 12
 
     TRISB = 0x00;               //configura a porta RB4 como saída digital
     PORTB = 0x00;               //Inicilaiza RB4 em LOW
 
     while(1){
         
-        if(counter == 2560){            //ciclo de máquina = 1/(Freq. /4 ) = 0,2057us
-                                         //a cada 0,2057us * 4 * 244 = 0,2007ms --tempo para incrementar no counter
-                                        //0,2007 * 4 * 244 * 2560 = 500ms
-            RB4 = ~RB4;
-            counter = 0x00;
-        }
+        RB5 = 0x01;
+        __delay_ms(500);
+        RB5 = 0x00;
+        __delay_ms(500);
+
+        
         
     }
 }
+
+
+
+/*#define botao1 RC0
+#define botao2 RC1
+#define led1 RD5
+#define led2 RD6
+int counter = 0x00;
+ //a cada 0,200271us * 128 * 256 = 6,5536ms --tempo
+void __interrupt() isr(void)      //vetor de interrupção
+{
+    if(INTCONbits.TMR0IF){          //Testando se houve estouro no Timer0
+        TMR0 = 0x00;                //Reinicia o registrador Timer0
+            if(!botao1){        //botao 1 pressionado
+                led1 = 0x01;
+            }
+
+            else if(!botao2){
+                led1 = 0x00;        
+            }
+        
+        INTCONbits.TMR0IF = 0x00;
+    }
+
+}*/
+
+
+/*void aula17(){//leitura de botões com interrupção pra ocorrer ao mesmo tempo que o acender de led
+    
+    CMCON = 0x07;
+    INTCON2bits.RBPU = 1;
+    INTCON2bits.INTEDG0 = 0;
+    T0CONbits.T0CS = 0;
+    T0CONbits.T0SE = 0;
+    T0CONbits.PSA = 0;
+    T0CONbits.T0PS2 = 0x06;  //prescaler 1:128
+    INTCONbits.GIE = 1;     //habilita interrupção global
+    INTCONbits.PEIE = 1;    //habilita interrupção por periféricos
+    INTCONbits.T0IE = 1;    //habilita interrupção do timer0
+    
+    TMR0 = 0x00;
+    
+    
+    
+    TRISC = 0x03;
+    TRISD = 0x00;
+    
+    PORTD = 0x03;
+
+    while(1){
+        led2 = 0x00;
+        __delay_ms(500);
+        led2 = 0x01;
+        __delay_ms(500);
+        
+        
+    
+    
+    }
+    
+    
+
+}*/
+
+/*void __interrupt() isr(void)      //vetor de interrupção
+{
+    if(PIR1bits.TMR2IF)             //houve estouro do timer2 caso verdadeiro
+    {
+        PORTB = ~PORTB;             //Inverte o valor do PORTB
+    
+        PIR1bits.TMR2IF = 0x00;     //limpa a flag
+    }
+
+
+
+
+
+}*/
+
+/*void aula18(){
+    INTCONbits.GIE = 1;         //habilita a interrupção global
+    INTCONbits.PEIE = 1;        //habilita a interrupção por periféricos
+    PIE1bits.TMR2IE = 1;        //habilita a interrupção dop timer2
+    T2CON = 0b01010101;         //liga o timer2, postscaler 1:10, prescaler 1:4
+    PR2 = 100;                  //Compara o timer2 com o PR2, PR2 = 100
+    TRISB = 0x00;
+    PORTB = 0x00;
+    
+    
+    //ciclo de máquina * PR2 * prescaler * postscaler
+    //0,2us * 100 * 4 * 10 = 800us 
+    while(1){
+    
+    
+    
+    }
+
+
+
+}*/
+
+
+//Código em estudo!!!!!
+
+/*#define botao1 RC0
+#define botao2 RC1
+#define led1 RD5
+#define led2 RD6
+int counter = 0x00;
+ //a cada 0,200271us * 128 * 256 = 6,5536ms --tempo
+void __interrupt() isr(void)      //vetor de interrupção
+{
+    if(INTCONbits.TMR0IF){          //Testando se houve estouro no Timer0
+        TMR0 = 0x00;                //Reinicia o registrador Timer0
+            if(!botao1){        //botao 1 pressionado
+                CCPR1L++;       //aumenta o pwm
+            }
+
+            else if(!botao2){
+                
+                CCPR1L--;       //diminui o pwm    
+            }
+        
+        INTCONbits.TMR0IF = 0x00;
+    }
+
+}
+
+void aula19(){
+
+
+
+//PWM configurado a partir do TIMER2    
+    CMCON = 0x07;
+    INTCON2bits.RBPU = 1;
+    INTCON2bits.INTEDG0 = 0;
+    T0CONbits.T0CS = 0;
+    T0CONbits.T0SE = 0;
+    T0CONbits.PSA = 0;
+    T0CONbits.T0PS2 = 0x06;  //prescaler 1:128
+    INTCONbits.GIE = 1;     //habilita interrupção global
+    INTCONbits.PEIE = 1;    //habilita interrupção por periféricos
+    INTCONbits.T0IE = 1;    //habilita interrupção do timer0
+    
+    TMR0 = 0x00;
+    
+    //ciclo ativo -> PR2 + 1 = TMR2 (Quando há o estouro do TMR2, passamos de low para high)
+    //borda de descida --> CCPR1L:CCP1CON<5:4>
+    
+    //periodo do pwm = (PR2 + 1) * ciclo de máquina * prescaler do timer2
+    //periodo = (255+1) * 0,2us * 16 = 0,8192ms
+    //frequencia = 1/periodo = 1220,70Hz = 1,22kHz
+    
+    PR2 = 0xFF;             //Inicializa o registrador do controole do timer 2 em 255
+    T2CON = 0x06;           //Liga o timer2 e prescaler 1:16
+    CCPR1L = 0x00;          //led iniciará desligado
+    CCP1CONbits.CCP1M3 = 0x0C;       //habilita o PWM P1A, P1C active-high; P1B, P1D active-high
+    T2CONbits.TMR2ON = 1;
+    
+    
+    TRISC = 0x03;       //somente RC0 e RC1 como entrada
+    TRISD = 0x00; 
+    PORTD = 0x00;
+    PORTC = 0x03;
+
+    
+    while(1){
+
+        //
+    }
+    
+
+
+}*/
 
 void main(void) {
     //aula01();
@@ -671,9 +848,10 @@ void main(void) {
     //aula13();
     //aula14();
     //aula15();
-    aula16();
-    
-    
+    //aula16();
+    //aula17();
+    //aula18();
+    aula19();
     
     
 
