@@ -43,7 +43,7 @@ Verificar a necessidade de utilizar as interrupções externas*/
 
 
 //------------------------------------------------------------------------------------
-//Código de base para qualquer outro robô, aqui estão todas as funções e ideias usadas
+//Código de base para qualquer outro robô, com algumas implementações diferentes como o sensor traseiro único de um robô, aqui estão todas as funções e ideias usadas
 //até o momento, sendo estas comentadas para utilização futura.
 //------------------------------------------------------------------------------------
 
@@ -99,7 +99,7 @@ double MotorA, MotorB; // PWM que será alterado pelo PID
 
 int position_line = 0; // Método com o Read Line;
 
-int ExcessoA, ExcessoB;
+int ExcessoA, ExcessoB;     //uTILIZADO PARA TRATAR COM EXCESSO DE PWM(?)
 
 int contador = 0, acionador = 0; // Borda
 
@@ -185,7 +185,7 @@ int conversao_AD8(void){
 
 }
 
-char uart_rd;           //Variável de leitura serial
+char uart_rd;           //Variável de leitura serial a ser implementada no código
 int leitura1 = 0;       //leitura analógica
 int leitura2 = 0;
 int leitura3 = 0;
@@ -236,6 +236,9 @@ void main(){
     
     PORTA = 0x00;               //Inicializa todo o PORTA em 0
     PORTE = 0x00;               //Inicializa todo o PORTE em 0
+    PORTC = 0x00;
+    PORTD = 0x00;
+    PORTB = 0x18;               //RB3 e RB4 em nível lógico alto
     
     //--Região de configuração dos registradores do ADC--//
     ADCON1 = 0b00000111;        //habilita as portas AN0 até AN7 como portas analógicas
@@ -286,8 +289,10 @@ void main(){
     
     while(1){
     
-        //função de calibração atribuindo a sensor de curva
+        //função de calibração atribuindo ao sensor de curva
         led = 0x01;
+        __delay_ms(200);
+        led = 0x00;
         
         //--Cáculo do erro dos sensores frontais através de média ponderada--//
         int peso [] = {-3, -2, -1, 1, 2 , 3};
@@ -325,6 +330,13 @@ void main(){
         
         
         
+        //-------------ÁREA PARA VOLTAR A PISTA SERÁ IMPLEMENTADO---------------//
+        
+        
+        
+        
+        
+        
         //--------AREA DO PID------//
         p = erro * Kp; // Proporcao
   
@@ -340,7 +352,17 @@ void main(){
         MotorB = PWM + Turn;   //lado esquerdo
         
         
-        //------->AREA DO SENTIDO DAS RODAS<-----//
+        
+        
+        //-----------ÁREA DO LIMITE DO PWM(?)-----------//
+        
+        
+        
+        
+        
+        
+        
+        //------->AREA DO SENTIDO DAS RODAS<-----// lógica a ser revisada
         
         Frente();
         
@@ -381,7 +403,7 @@ void Frente(){
 
 }
 
-void Tras(){
+void Tras(){        //função fora de uso no momento
 
     AIN1 = 0x00;
     AIN2 = 0x01;
@@ -438,6 +460,6 @@ void Freio(){       //Essa função deve ser reformulada
     BIN1 = 0x00;
     BIN2 = 0x00;
     
-    __delay_ms(10000);
+    __delay_ms(10000);      //10 segundos de delay
 
 }
