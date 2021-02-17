@@ -90,18 +90,16 @@ Verificar a necessidade de utilizar as interrupções externas*/
 
 #define led RD0         //led indicador de calibração
 
-int LeituraBranco = 0;         // Numero de vezes que o sensor de borda lera branco
+int LeituraBranco = 0;         // Numero de vezes que o sensor de parada lera branco
 double Kp = 0, Kd = 0, Ki = 0; // Variáveis que são modificadas no PID
 int PWM = 0, PWMR = 0;         // valor da força do motor em linha reta
 double erro, p, d, erroAnterior = 0, i, integral = 0, Turn = 0; //Área PID
 double MotorA, MotorB; // PWM que será alterado pelo PID
 
 
-int position_line = 0; // Método com o Read Line;
-
 int ExcessoA, ExcessoB;     //uTILIZADO PARA TRATAR COM EXCESSO DE PWM(?)
 
-int contador = 0, acionador = 0; // Borda
+int contador = 0, acionador = 0; // Sensor de parada
 
 //Área de definição das portas analógicas
 
@@ -227,6 +225,10 @@ void main(){
     TRISCbits.RC2 = 0x00;       //PWMA como saída
     TRISCbits.RC1 = 0x00;
     
+    TRISCbits.RC7 = 0x01;       //pino RX como entrada
+    TRISCbits.RC6 = 0x00;       //pino TX como saída
+    
+    
     //Saídas para os motores/ponte-h
     TRISDbits.RD4 = 0x00;       //AIN1
     TRISDbits.RD5 = 0x00;       //AIN2
@@ -234,9 +236,9 @@ void main(){
     TRISDbits.RD7 = 0x00;       //BIN2
     
     
-    PORTA = 0x00;               //Inicializa todo o PORTA em 0
-    PORTE = 0x00;               //Inicializa todo o PORTE em 0
-    PORTC = 0x00;
+    PORTA = 0xFF;               //Inicializa todo o PORTA em 1
+    PORTE = 0xFF;               //Inicializa todo o PORTE em 0
+    PORTC = 0x80;
     PORTD = 0x00;
     PORTB = 0x18;               //RB3 e RB4 em nível lógico alto
     
@@ -273,7 +275,22 @@ void main(){
     serial_tx(10);
     serial_tx(13);      //quebra de linha
     
-    //---->Calibração dos sensores<---// Ainda a ser implementada
+    
+    //---->Calibração do sensor de parada<---// Ainda a ser implementada
+    
+    for (int i = 0; i < 70; i++) 
+    {
+      //bordaEsq.calibrate();
+      //bordaDir.calibrate();
+      __delay_ms(5);
+    }
+
+    led = 0x01;
+    __delay_ms(1000);
+    led = 0x00;
+    
+    
+    //---->Calibração dos sensores frontais<---// Ainda a ser implementada
     for(int i = 0; i <120; i++){
         //calibração
         __delay_ms(5);
@@ -290,6 +307,7 @@ void main(){
     while(1){
     
         //função de calibração atribuindo ao sensor de curva
+        
         led = 0x01;
         __delay_ms(200);
         led = 0x00;
@@ -323,15 +341,52 @@ void main(){
         //------------AREA DO SENSOR DE PARADA A SER IMPLEMENTADO----------//
         
         
+        if ((sensor_de_parada = 0x00) && (acionador == 0x00))   //leu linha branca, marcador de largada ou chegada
+        {
+        contador++;
+        acionador = 1;
+        }
+
+        if ((sensor_de_parada > 0x01) && (acionador == 1))
+        {
+        acionador = 0;
+        }
+
+        while (contador >= LeituraBranco) 
+        {
+        Freio();
+        }
         
         
-        
-        
+        //obs.: implementar condição de cruzamento para não incrementar valor no contador das marcações
         
         
         
         //-------------ÁREA PARA VOLTAR A PISTA SERÁ IMPLEMENTADO---------------//
-        
+        if ((sensores_frontais[0] < 100) && (sensores_frontais[5] > 900))
+        {
+            led = 0x01;
+            while (sensores_frontais[2] >= 300)
+            {
+                GiroAntihorario();  //Giroantihorario();
+
+                PWM1_Set_Duty(PWMR);
+                PWM2_Set_Duty(PWMR);      
+    //          qtra.readCalibrated(sensor_values);     //função de calibração ainda a ser implementada
+           }
+        }
+        else if ((sensores_frontais[5]< 100) && (sensores_frontais[0] > 900))
+        {
+            led = 0x01;
+            while (sensores_frontais[3] >= 300)
+            {
+                Girohorario();    //Girohorario();
+                
+                PWM1_Set_Duty(PWMR);
+                PWM2_Set_Duty(PWMR);
+//              qtra.readCalibrated(sensor_values);       //função de calibração ainda a ser implementada
+            }  
+        }
         
         
         
@@ -355,11 +410,35 @@ void main(){
         
         
         //-----------ÁREA DO LIMITE DO PWM(?)-----------//
+        //função a ser estudada para ver a real necessidade dela
         
-        
-        
-        
-        
+        if (MotorA > 260)
+        {
+          ExcessoB = (abs(MotorA) - 250);
+          MotorA = 250;
+          MotorB -= ExcessoB;
+        }
+
+        else if (MotorB > 260)
+        {
+          ExcessoA = (abs(MotorB) - 250);
+          MotorB = 250;
+          MotorA -= ExcessoA;
+        }
+
+        if (MotorA < -260)
+        {
+          ExcessoB = (abs(MotorA) - 250);
+          MotorA = 250;
+          MotorB += ExcessoB;
+        }
+
+        else if (MotorB < -260)
+        {
+          ExcessoA = (abs(MotorB) - 250);
+          MotorB = 250;
+          MotorA += ExcessoA;
+        }
         
         
         //------->AREA DO SENTIDO DAS RODAS<-----// lógica a ser revisada
@@ -371,14 +450,12 @@ void main(){
             AIN1 = 0x00;  //Sentido horário estado baixo
             AIN2 = 0x01;  //Sentido anti-horário estado alto
             
-            Girohorario();
         }
         if (MotorB < 0) // Giro para a esquerda
         {
             BIN1 = 0x00;  //Sentido horário estado baixo
             BIN2 = 0x01;  //Sentido anti-horário estado alto
             
-            GiroAntihorario();
             
         }
 
@@ -463,3 +540,7 @@ void Freio(){       //Essa função deve ser reformulada
     __delay_ms(10000);      //10 segundos de delay
 
 }
+
+
+//obs.: estudar e implementar todas as funções que faltam
+//e as que possuem comentário para revisão
