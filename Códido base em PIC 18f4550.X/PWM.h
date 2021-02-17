@@ -1,7 +1,7 @@
-//duty1 -> motor B, da esquerda
-//duty2 -> motor A, da direita
+//pwm1 -> motor A, da direita
+//pwm2 -> motor B, da esquerda
 
 //Protótipos:
 void PWM_Init ();
-void PWM1_Set_Duty (unsigned short duty1);
-void PWM2_Set_Duty (unsigned short duty2);
+void PWM1_Set_Duty (unsigned short pwm1);
+void PWM2_Set_Duty (unsigned short pwm2);
