@@ -3,6 +3,20 @@
 #include "PWM.h"
 
 //Funções:
+#define Prescale T2CONbits.T2CKPS1
+#define Set_Prescale T2CONbits.T2CKPS0
+#define Timer2 T2CONbits.TMR2ON
+#define PWM1_mode CCP1CONbits.CCP1M3
+#define PWM1_config CCP1CONbits.CCP1M2
+#define PWM2_mode CCP2CONbits.CCP2M3
+#define PWM2_config CCP2CONbits.CCP2M2
+#define LowByteCCP1 CCPR1L
+#define selectionBit1 CCP1CONbits.DC1B1
+#define selectionBit2 CCP1CONbits.DC1B0
+#define LowByteCCP2 CCPR2L
+#define selectionBit3 CCP2CONbits.DC2B1
+#define selectionBit4 CCP2CONbits.DC2B0
+
 
 void PWM_Init () {
     //periodo do pwm = (PR2 + 1) * ciclo de máquina * prescaler do timer2
@@ -11,34 +25,33 @@ void PWM_Init () {
     
     PR2 = 240;
 
-    T2CONbits.T2CKPS1 = 1; 
-    T2CONbits.T2CKPS0 = 1;   // Timer 2 Prescaler = 16 
-    T2CONbits.TMR2ON = 1; 
+    Prescale = 1; 
+    Set_Prescale = 1;   // Timer 2 Prescaler = 16 
+    Timer2 = 1; 
     
-    CCP1CONbits.CCP1M3 = 1;
-    CCP1CONbits.CCP1M2 = 1;     // Configura o pino CCP1 para o modo PWM
+    PWM1_mode = 1;
+    PWM1_config = 1;     // Configura o pino CCP1 para o modo PWM
     
-    CCP2CONbits.CCP2M3 = 1;
-    CCP2CONbits.CCP2M2 = 1;     // Configura o pino CCP2 para o modo PWM
+    PWM2_mode= 1;
+    PWM2_config = 1;     // Configura o pino CCP2 para o modo PWM
     
 }
 
-void PWM1_Set_Duty (unsigned short duty1)  // duty_ratio vai de 0 a 962
+void PWM1_Set_Duty (unsigned short pwm1)  // duty_ratio vai de 0 a 962
 {
     
-    CCPR1L = duty1 >> 2;
-    CCP1CONbits.DC1B1 = duty1 & 2;
-    CCP1CONbits.DC1B0 = duty1 & 1; 
+    LowByteCCP1 = pwm1 >> 2;
+    selectionBit1 = pwm1 & 2;
+    selectionBit2 = pwm1 & 1; 
     
 }
 
-void PWM2_Set_Duty (unsigned short duty2)  // duty_ratio vai de 0 a 962
+void PWM2_Set_Duty (unsigned short pwm2)  // duty_ratio vai de 0 a 962
 {
     
-    CCPR2L = duty2 >> 2;
-    CCP2CONbits.DC2B1 = duty2 & 2;
-    CCP2CONbits.DC2B0 = duty2 & 1; 
+    LowByteCCP2 = pwm2 >> 2;
+    selectionBit3 = pwm2 & 2;
+    selectionBit4 = pwm2 & 1; 
     
 }
-
 
