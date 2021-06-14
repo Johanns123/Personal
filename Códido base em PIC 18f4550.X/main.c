@@ -90,11 +90,15 @@ Verificar a necessidade de utilizar as interrupções externas*/
 
 #define led RD0         //led indicador de calibração
 
+
+int prescale_erro = 100;        //precales para evitar o uso de float
+int prescale_constantes = 10;
 int LeituraBranco = 0;         // Numero de vezes que o sensor de parada lera branco
-double Kp = 0, Kd = 0, Ki = 0; // Variáveis que são modificadas no PID
-int PWM = 0, PWMR = 0;         // valor da força do motor em linha reta
-double erro, p, d, erroAnterior = 0, i, integral = 0, Turn = 0; //Área PID
-double MotorA, MotorB; // PWM que será alterado pelo PID
+int Kp = 0, Kd = 0, Ki = 0; // Variáveis que são modificadas no PID
+                            //que serão multiplicadas com um prescale de 10 - ex: kp = 15
+int PWM = 0 , PWMR = 0;      // valor da força do motor em linha reta
+int erro, p, d, erroAnterior = 0, i, integral = 0, Turn = 0; //Área PID
+int MotorA, MotorB; // PWM que será alterado pelo PID
 
 
 int ExcessoA, ExcessoB;     //uTILIZADO PARA TRATAR COM EXCESSO DE PWM(?)
@@ -251,14 +255,8 @@ void main(){
     
     
     //-----leitura dos sensores frontais-------//
-    leitura1 = conversao_AD1();
-    leitura2 = conversao_AD2();
-    leitura3 = conversao_AD3();
-    leitura4 = conversao_AD4();
-    leitura5 = conversao_AD5();
-    leitura6 = conversao_AD6();
         
-    int sensores_frontais [] = {leitura1, leitura2, leitura3, leitura4, leitura5, leitura6};  //sensores frontais declarados como vetores
+    int sensores_frontais [] = {conversao_AD1(), conversao_AD2(), conversao_AD3(), conversao_AD4(), conversao_AD5(), conversao_AD6()};  //sensores frontais declarados como vetores
         
     //------leitura dos sensores traseiros---//
         
@@ -276,7 +274,7 @@ void main(){
     serial_tx(13);      //quebra de linha
     
     
-    //---->Calibração do sensor de parada<---// Ainda a ser implementada
+    //---->Calibração dos sensores laterais<---// Ainda a ser implementada
     
     for (int i = 0; i < 70; i++) 
     {
@@ -305,19 +303,21 @@ void main(){
     led= 0x00;
     
     while(1){
-    
+        //necessário declarar as conversões no while também
         //função de calibração atribuindo ao sensor de curva
         
         led = 0x01;
         __delay_ms(200);
         led = 0x00;
         
-        //--Cáculo do erro dos sensores frontais através de média ponderada--//
-        int peso [] = {-3, -2, -1, 1, 2 , 3};
-        float soma_direito, soma_esquerdo, denominador_direito, denominador_esquerdo;
-        float Erro_direito, Erro_esquerdo;
+        int sensores_frontais [] = {conversao_AD1(), conversao_AD2(), conversao_AD3(), conversao_AD4(), conversao_AD5(), conversao_AD6()};
         
-        for(int j = 0; j < 3; j++){
+        //--Cáculo do erro dos sensores frontais através de média ponderada--//
+        int peso [] = {-300, -200, -100, 100, 200 , 300}; //utilizando um prescale de 100
+        int soma_direito, soma_esquerdo, denominador_direito, denominador_esquerdo;
+        int Erro_direito, Erro_esquerdo;
+        
+        for(int j = 0; j < 3; j++){     //estudar a função
             denominador_direito += sensores_frontais[j];
             soma_direito += (sensores_frontais[j] * peso[j]);
         
@@ -393,18 +393,18 @@ void main(){
         
         
         //--------AREA DO PID------//
-        p = erro * Kp; // Proporcao
+        p = (erro * Kp)/(prescale_erro + prescale_constantes); // Proporcao - divide pelo prescale do erro e da constante, logo 1000
   
         integral += erro; // Integral
-        i = Ki * integral;
+        i = (Ki * integral)/(prescale_erro + prescale_constantes); //divide pelo prescale do erro e da constante
  
-        d = Kd * (erro - erroAnterior); // Derivada
-        erroAnterior = erro;
+        d = (Kd * (erro - erroAnterior))/(prescale_erro + prescale_constantes); // Derivada - divide pelo prescale do erro e da constante
+        erroAnterior = erro/prescale_erro;    //erro/prescale do erro
   
         Turn = p + i + d;
   
-        MotorA = PWM - Turn;   //lado direito
-        MotorB = PWM + Turn;   //lado esquerdo
+        MotorA = PWMR - Turn;   //lado direito
+        MotorB = PWMR + Turn;   //lado esquerdo
         
         
         
