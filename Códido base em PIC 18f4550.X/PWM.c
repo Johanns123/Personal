@@ -2,6 +2,9 @@
 
 #include "PWM.h"
 
+
+
+//Este pwm está configurado como pwm de 10 bits
 //Funções:
 #define Prescale T2CONbits.T2CKPS1
 #define Set_Prescale T2CONbits.T2CKPS0
