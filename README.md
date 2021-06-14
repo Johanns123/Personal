@@ -1,2 +1,0 @@
-# Personal
-Estudo seguidor
