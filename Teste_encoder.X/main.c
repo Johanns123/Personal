@@ -27,6 +27,7 @@ volatile char ch; //armazena o caractere lido
 volatile char flag_com = 0; //flag que indica se houve recepção de dado
 char buffer [5];
 char teste [] = "Palavra";
+int Lstate = 0;
 
 // ========================================================================================================
 // --- Variáveis Globais ---
@@ -69,8 +70,9 @@ ISR(USART_RX_vect) {
  tempo = X_bit_timer * Prescaler/Fosc
  Valor inicial de contagem = 256 ? tempo_desejado?Fosc/Prescaler = 256 ? 0,01?16000000/1024 = 98,75 ? 99
  Valor inicial de contagem = X_bit_timer - tempo_desejado*Fosc/Prescaler*/
+
 ISR(TIMER0_OVF_vect) {
-    TCNT0 = 255; //Recarrega o Timer 0 para que a contagem seja 1ms novamente
+    TCNT0 = 240; //Recarrega o Timer 0 para que a contagem seja 1ms novamente
 }
 
 ISR(TIMER1_OVF_vect) {
@@ -84,7 +86,7 @@ ISR(TIMER2_OVF_vect) {
 }
 
 ISR(INT0_vect) {
-    count_pulses();    
+    count_pulses();
 }
 
 int main(void) {
@@ -103,7 +105,7 @@ void setup() {
 
     //=============Configuração dos timers=========//
     TCCR0B = 0b00000101; //TC0 com prescaler de 1024
-    TCNT0 = 255; //Inicia a contagem em 100 para, no final, gerar 1ms
+    TCNT0 = 240; //Inicia a contagem em 100 para, no final, gerar 1ms
     TIMSK0 = 0b00000001; //habilita a interrupção do TC0
 
     TCCR1B = 0b00000101; //TC1 com prescaler de 1024 de 200ms
@@ -119,7 +121,7 @@ void setup() {
     //PCICR = 0b00000001; //Ativa os PCINT0 - interrupção externa
     //PCMSK0 = 0b01111111; //Habilita o PC0 - PC6 como PCINT (PCINT específico)
 
-    EICRA = 0x03;
+    EICRA = 0x01;
     EIMSK = 0x01; //habilita INT0
     //====Configuração do PWM========================//
     TCCR1A = 0xA2; //Configura operação em fast PWM, utilizando registradores OCR1x para comparação
@@ -131,10 +133,12 @@ void setup() {
     //============================//
 
     sei();
+    
+    Lstate = (tst_bit(PIND, encoder_C1) >> encoder_C1);
 }
 
 void loop() {
-
+    //count_pulses();
     motor_control();
     _delay_ms(100);
 }
@@ -151,34 +155,32 @@ void motor_control() {
         set_bit(PORTD, motor2);
         pwm_value = (adc >> 2);
         setDuty_2(pwm_value);
-    }
-    else {
+    } else {
         set_bit(PORTD, motor1);
         clr_bit(PORTD, motor2);
         pwm_value = 511 - (adc >> 2);
         setDuty_2(pwm_value);
     }
 
-    pulse_number = 0x00;
+    //pulse_number = 0x00;
 }
 
 void count_pulses() {
-    int Lstate = tst_bit(PIND,encoder_C1); //lê estado do encoder_C1 e armazena em Lstate
+    int aState = (tst_bit(PIND, encoder_C1) >> encoder_C1); //lê estado do encoder_C1 e armazena em Lstate
 
     //if (Encoder_C1Last != Lstate) //Encoder_C1Last igual a zero e Lstate diferente de zero
     //{
-        int val = tst_bit(PIND,encoder_C2); //Lê estado de encoder_C2 e armazena na variável val
+    //int val = (tst_bit(PIND, encoder_C2) >> encoder_C2); //Lê estado de encoder_C2 e armazena na variável val
 
-        if((Lstate != val) && direction_m)      direction_m = 1;    //sentido reverso
-        
-        else if((Lstate == val) && !direction_m);  direction_m = 0;    //sentido direto
-    //}
-    
-    Encoder_C1Last = Lstate;    //Encoder_C1Last recebe o valor antigo
-    
-    if(!direction_m)    pulse_number++;
-    else                pulse_number--;
-    
+    if(aState != Lstate){
+        if((tst_bit(PIND, encoder_C2) >> encoder_C2) != aState){
+            pulse_number++;
+        }
+        else{
+            pulse_number--;
+        }
+    }
+    Lstate = aState;
 }
 
 void setDuty_1(int duty) //MotorA
