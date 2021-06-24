@@ -56,7 +56,7 @@ unsigned int timer2, TempoEspera = 100;
 int ejetor = 0;
 int tempo_atual = 0;
 
-int valor_min [] = {1023, 1023, 1023, 1023, 1023, 1023};
+int valor_min [] = {1023, 1023, 1023, 1023, 1023, 1023}; //variáveis usadas na calibração do sensores
 int valor_max [] = {0, 0, 0, 0, 0, 0};
 int valor_min_abs = 0, valor_max_abs = 1023;
 
@@ -92,24 +92,20 @@ ISR(USART_RX_vect) {
 
 ISR(TIMER0_OVF_vect) {
     TCNT0 = 240; //Recarrega o Timer 0 para que a contagem seja 1ms novamente
-    millis++; //Incrementa a variável millis a cada 10ms
-    contador++;
-    if (contador == 50) {
-        correcao_do_PWM(); //controle PID
-        PWM_limit(); //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
-        contador = 0;
-    }
+    millis++; //Incrementa a variável millis a cada 1ms
     sensores(); //faz a leitura dos sensores e se estiverem com valores fora do limiar, a correção será feita.
 }
 
 ISR(TIMER1_OVF_vect) {
     TCNT1 = 64755; //Inicializa em 64755 com 50ms
+    correcao_do_PWM(); //controle PID
+    PWM_limit(); //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
 }
 
 ISR(TIMER2_OVF_vect) {
     TCNT2 = 178; //Inicializa em 178 para um tempo de 5ms
-    area_de_parada();   //Verfica se é uma parada ou um cruzamento
-    sentido_de_giro();  //Verifica qual o sentido da curva
+    area_de_parada(); //Verfica se é uma parada ou um cruzamento
+    sentido_de_giro(); //Verifica qual o sentido da curva
 }
 //------------------------------------------------------
 
@@ -162,6 +158,14 @@ void setup() {
     TCNT0 = 240; //Inicia a contagem em 100 para, no final, gerar 1ms
     TIMSK0 = 0b00000001; //habilita a interrupção do TC0
 
+    TCCR1B = 0b00000101; //TC1 com prescaler de 1024 de 50ms
+    TCNT1 = 64755; //Inicializa em 64755
+    TIMSK1 = 0b00000001; //habilita a interrupção do TC1
+
+    TCCR2B = 0b00000111; //TC2 com prescaler de 1024 com 5ms
+    TCNT2 = 178; //Inicializa em 178 para um tempo de 5ms
+    TIMSK2 = 0b00000001; //Habilita a interrupção do TC2
+
     TCCR1A = 0xA2; //Configura operação em fast PWM, utilizando registradores OCR1x para comparação
 
     setFreq(4); //Seleciona opção para frequência
@@ -195,14 +199,6 @@ void loop() {
     sensores();
 
     //----------------------------------------------------------------//
-
-
-
-
-
-
-
-
 
 }
 
@@ -388,7 +384,8 @@ int calibra_sensores() {
         for (int i = 0; i < 6; i++) {
             if (valor_min [i] > sensores_frontais [i]) {
                 valor_min[i] = sensores_frontais[i];
-            } else if (valor_max [i] < sensores_frontais[i]) {
+            } 
+            else if (valor_max [i] < sensores_frontais[i]) {
                 valor_max[i] = sensores_frontais [i];
             }
         }
@@ -410,7 +407,8 @@ int seta_calibracao() {
     for (int i = 0; i < 6; i++) {
         if (valor_min_abs < valor_min [i]) {
             valor_min_abs = valor_min [i];
-        } else if (valor_max_abs > valor_max [i]) {
+        }
+        else if (valor_max_abs > valor_max [i]) {
             valor_max_abs = valor_max [i];
         }
     }
@@ -427,7 +425,8 @@ int sensores() {
     for (int i = 0; i < 6; i++) {
         if (valor_min_abs > sensores_frontais[i]) {
             sensores_frontais[i] = valor_min_abs;
-        } else if (valor_max_abs < sensores_frontais[i]) {
+        } 
+        else if (valor_max_abs < sensores_frontais[i]) {
             sensores_frontais [i] = valor_max_abs;
         }
 
