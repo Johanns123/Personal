@@ -56,8 +56,8 @@ unsigned int timer2, TempoEspera = 100;
 int ejetor = 0;
 int tempo_atual = 0;
 
-int valor_min [] = {1023, 1023, 1023, 1023, 1023, 1023}; //variáveis usadas na calibração do sensores
-int valor_max [] = {0, 0, 0, 0, 0, 0};
+int valor_max [] = {1023, 1023, 1023, 1023, 1023, 1023}; //variáveis usadas na calibração do sensores
+int valor_min [] = {0, 0, 0, 0, 0, 0};
 int valor_min_abs = 0, valor_max_abs = 1023;
 
 unsigned int delta_T = 0;
@@ -143,11 +143,12 @@ int main(void) {
 void setup() {
 
 
-    DDRD = 0b01111000; //PD3 - PD6 definidos como saída, PD7 como entrada
-    PORTD = 0b00000000; //inicializados em nível baixo
-    DDRB = 0b00100110; //Habilita PB0 como entrada e PB5, PB1 e PB2 como saída
-    PORTB = 0b00000000; //PORTB inicializa desligado e saídas sem pull up
-
+    DDRD =  0b01111000; //PD3 - PD6 definidos como saída, PD7 como entrada
+    PORTD = 0b10000000; //inicializados em nível baixo e PD7 com pull up
+    DDRB =  0b00100110; //Habilita PB0 como entrada e PB5, PB1 e PB2 como saída
+    PORTB = 0b00000001; //PORTB inicializa desligado e pull up no PB0
+    DDRC =  0b00000000; //PORTC como entrada
+    PORTC = 0b00001111; //PC3 - PC0 com pull up (colocar resistor de pull up nos pinos A6 e A7)
 
     //esquerdo pino 4 - PD2
     UART_config(); //Inicializa a comunicação UART
@@ -193,10 +194,7 @@ void setup() {
 void loop() {
 
 
-
-
-    //região que seta os valores nos sensores frontais após a calibração
-    sensores();
+    
 
     //----------------------------------------------------------------//
 
@@ -323,7 +321,9 @@ void freio() {
 //=========Funções visíveis ao usuário===========//
 
 void entrou_na_curva(int valor_erro) {
-    if ((!tst_bit(PORTD, sensor_de_curva) >> sensor_de_curva) && tst_bit(PORTD, sensor_de_parada) >> sensor_de_parada) {
+    if ((!tst_bit(PINB, sensor_de_curva) >> sensor_de_curva) && tst_bit(PIND, sensor_de_parada) >> sensor_de_parada)
+        //li branco no sensor de curva e li preto no sensor de parada
+    {
         switch (entrou) {
             case 0: //entrou na curva
                 u_curva = PID_Curva(valor_erro);
@@ -360,10 +360,10 @@ int PID_Curva(int error_curva) {
 }
 
 int parada(int value_erro) {
-    if ((!tst_bit(PORTD, sensor_de_curva) >> sensor_de_curva) && tst_bit(PORTD, sensor_de_parada) >> sensor_de_parada) {
+    if ((!tst_bit(PINB, sensor_de_curva) >> sensor_de_curva) && tst_bit(PIND, sensor_de_parada) >> sensor_de_parada) {
         contador++;
         entrou_na_curva(value_erro); // Verifica se é uma curva
-    } else if ((!tst_bit(PORTD, sensor_de_curva) >> sensor_de_curva) && (!tst_bit(PORTD, sensor_de_parada) >> sensor_de_parada)) //verifica se é crizamento
+    } else if ((!tst_bit(PINB, sensor_de_curva) >> sensor_de_curva) && (!tst_bit(PIND, sensor_de_parada) >> sensor_de_parada)) //verifica se é crizamento
     {
         frente();
         setDuty_1(PWMA);
@@ -377,15 +377,14 @@ int parada(int value_erro) {
 
 int calibra_sensores() {
     int calibrado = 0;
-    inicializa_ADC(); //Configura o ADC
     //=====Função que inicializa a calibração====//
     for (int i = 0; i < 120; i++) {
         int sensores_frontais[] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)};
         for (int i = 0; i < 6; i++) {
-            if (valor_min [i] > sensores_frontais [i]) {
+            if (valor_min [i] < sensores_frontais [i]) {
                 valor_min[i] = sensores_frontais[i];
             } 
-            else if (valor_max [i] < sensores_frontais[i]) {
+            else if (valor_max [i] > sensores_frontais[i]) {
                 valor_max[i] = sensores_frontais [i];
             }
         }
@@ -423,10 +422,10 @@ int sensores() {
     //======Estabelece o limiar da leitura dos sensores====//
     //função de correção da calibração
     for (int i = 0; i < 6; i++) {
-        if (valor_min_abs > sensores_frontais[i]) {
+        if (valor_min_abs < sensores_frontais[i]) {
             sensores_frontais[i] = valor_min_abs;
         } 
-        else if (valor_max_abs < sensores_frontais[i]) {
+        else if (valor_max_abs > sensores_frontais[i]) {
             sensores_frontais [i] = valor_max_abs;
         }
 
@@ -443,8 +442,8 @@ void area_de_parada() {
     delta_T = tempo_atual - timer2;
     switch (ejetor) {
         case 0:
-            if ((!(tst_bit(PORTB, sensor_de_curva) >> sensor_de_curva))
-                    || (!(tst_bit(PORTD, sensor_de_parada) >> sensor_de_parada)))//verifica se sos sensores estão em nível 0
+            if ((!(tst_bit(PINB, sensor_de_curva) >> sensor_de_curva))
+                    || (!(tst_bit(PIND, sensor_de_parada) >> sensor_de_parada)))//verifica se sos sensores estão em nível 0
             {
                 timer2 = tempo_atual;
                 ejetor = 1;
@@ -459,8 +458,8 @@ void area_de_parada() {
             break;
 
         case 2:
-            if ((tst_bit(PORTB, sensor_de_curva) >> sensor_de_curva)
-                    && (tst_bit(PORTD, sensor_de_parada) >> sensor_de_parada)) {
+            if ((tst_bit(PINB, sensor_de_curva) >> sensor_de_curva)
+                    && (tst_bit(PIND, sensor_de_parada) >> sensor_de_parada)) {
                 timer2 = 0;
                 ejetor = 0;
             }
