@@ -55,8 +55,8 @@ int denominador_direito = 6;
 int denominador_esquerdo = 6;
 int soma_total = 0;
 
-int valor_min [] = {1023, 1023, 1023, 1023, 1023, 1023};
-int valor_max [] = {0, 0, 0, 0, 0, 0};
+int valor_max [] = {1023, 1023, 1023, 1023, 1023, 1023};
+int valor_min [] = {0, 0, 0, 0, 0, 0};
 int valor_min_abs = 0, valor_max_abs = 1023;
 
 
@@ -129,10 +129,6 @@ ISR(TIMER2_OVF_vect) {
     sentido_de_giro();
 }
 
-ISR(PCINT0_vect) //É chamada toda vez que esses pinos sofrem alteração no sinal
-{
-
-}
 
 int main(void) {
 
@@ -143,7 +139,75 @@ int main(void) {
 }
 
 
-//==========funções secundárias=======//
+//===Funções não visíveis ao usuário======//
+
+
+void setup() {
+
+    DDRD = 0b01111000; //PD6 - PD3 definidos como saída
+    PORTD = 0b00000000; //inicializados em nível baixo
+    DDRB = 0b00100110; //Habilita PB1 e PB2 e PB5 como saída   PB1 e PB2 são portas PWM
+    PORTB = 0b00000000; //PORTB inicializa desligado e saídas sem pull up
+    DDRC = 0b00000000;  //PORTC como entrada
+    PORTC = 0b10101111; //Algumas entradas com pull up
+    
+    UART_config(); //Inicializa a comunicação UART
+    inicializa_ADC(); //Configura o ADC
+    UART_enviaString(s); //Envia um texto para o computador
+
+
+    //=============Configuração dos timers=========//
+    TCCR0B = 0b00000101; //TC0 com prescaler de 1024
+    TCNT0 = 240; //Inicia a contagem em 100 para, no final, gerar 1ms
+    TIMSK0 = 0b00000001; //habilita a interrupção do TC0
+
+    TCCR1B = 0b00000101; //TC1 com prescaler de 1024 de 50ms
+    TCNT1 = 64755; //Inicializa em 64755
+    TIMSK1 = 0b00000001; //habilita a interrupção do TC1
+
+    TCCR2B = 0b00000111; //TC2 com prescaler de 1024 com 5ms
+    TCNT2 = 178; //Inicializa em 178 para um tempo de 5ms
+    TIMSK2 = 0b00000001; //Habilita a interrupção do TC2
+    //=================================================//
+
+    //==========configuração das interrupções externas==========//
+    PCICR = 0b00000001; //Ativa os PCINT0 - interrupção externa
+    PCMSK0 = 0b01111111; //Habilita o PC0 - PC6 como PCINT (PCINT específico)
+
+
+    //====Configuração do PWM========================//
+    TCCR1A = 0xA2; //Configura operação em fast PWM, utilizando registradores OCR1x para comparação
+
+
+
+    setFreq(4); //Seleciona opção para frequência
+
+    //============================//
+
+    sei(); //Habilita as interrupções
+
+
+    set_bit(PORTB, PB5); //subrotina de acender e apagar o LED 13
+    calibra_sensores(); //calibração dos sensores
+    sensores(); //determina o limiar dos sensores e printa seus valores na tela
+    //========================//
+
+    clr_bit(PORTB, PB5);
+    _delay_ms(500);;
+    set_bit(PORTB, PB5);
+    _delay_ms(500);
+    clr_bit(PORTB, PB5);
+    _delay_ms(500);
+    set_bit(PORTB, PB5);
+    _delay_ms(1000);
+    clr_bit(PORTB, PB5);
+    _delay_ms(1000);
+}
+
+void loop() {
+
+
+}
 
 void setDuty_1(int duty) //MotorA
 {
@@ -307,83 +371,19 @@ int PID_Curva(int error_curva) {
 }
 //=========================================//
 
-void setup() {
 
-    DDRD = 0b01111000; //PD6 - PD3 definidos como saída
-    PORTD = 0b00000000; //inicializados em nível baixo
-    DDRB = 0b00100110; //Habilita PB1 e PB2 e PB5 como saída   PB1 e PB2 são portas PWM
-    PORTB = 0b00000000; //PORTB inicializa desligado e saídas sem pull up
-
-    UART_config(); //Inicializa a comunicação UART
-    inicializa_ADC(); //Configura o ADC
-    UART_enviaString(s); //Envia um texto para o computador
-
-
-    //=============Configuração dos timers=========//
-    TCCR0B = 0b00000101; //TC0 com prescaler de 1024
-    TCNT0 = 240; //Inicia a contagem em 100 para, no final, gerar 1ms
-    TIMSK0 = 0b00000001; //habilita a interrupção do TC0
-
-    TCCR1B = 0b00000101; //TC1 com prescaler de 1024 de 50ms
-    TCNT1 = 64755; //Inicializa em 64755
-    TIMSK1 = 0b00000001; //habilita a interrupção do TC1
-
-    TCCR2B = 0b00000111; //TC2 com prescaler de 1024 com 5ms
-    TCNT2 = 178; //Inicializa em 178 para um tempo de 5ms
-    TIMSK2 = 0b00000001; //Habilita a interrupção do TC2
-    //=================================================//
-
-    //==========configuração das interrupções externas==========//
-    PCICR = 0b00000001; //Ativa os PCINT0 - interrupção externa
-    PCMSK0 = 0b01111111; //Habilita o PC0 - PC6 como PCINT (PCINT específico)
-
-
-    //====Configuração do PWM========================//
-    TCCR1A = 0xA2; //Configura operação em fast PWM, utilizando registradores OCR1x para comparação
-
-
-
-    setFreq(4); //Seleciona opção para frequência
-
-    //============================//
-
-    sei(); //Habilita as interrupções
-
-
-    set_bit(PORTB, PB5); //subrotina de acender e apagar o LED 13
-    calibra_sensores(); //calibração dos sensores
-    sensores(); //determina o limiar dos sensores e printa seus valores na tela
-    //========================//
-
-    clr_bit(PORTB, PB5);
-    set_bit(PORTB, PB5);
-    clr_bit(PORTB, PB5);
-    set_bit(PORTB, PB5);
-    clr_bit(PORTB, PB5);
-    set_bit(PORTB, PB5);
-    clr_bit(PORTB, PB5);
-    set_bit(PORTB, PB5);
-    clr_bit(PORTB, PB5);
-    set_bit(PORTB, PB5);
-    clr_bit(PORTB, PB5);
-}
-
-void loop() {
-
-
-}
+//=========Funções visíveis ao usuário===========//
 
 int calibra_sensores() {
     int calibrado = 0;
-    inicializa_ADC(); //Configura o ADC
     //=====Função que inicializa a calibração====//
     for (int i = 0; i < 120; i++) {
-        //int sensores_frontais[] = {le_ADC(0), le_ADC(1), le_ADC(2), le_ADC(3), le_ADC(4), le_ADC(6)};
-        int sensores_frontais[] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)}; //Grogue antigo 
+        int sensores_frontais[] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)};
         for (int i = 0; i < 6; i++) {
-            if (valor_min [i] > sensores_frontais [i]) {
+            if (valor_min [i] < sensores_frontais [i]) {
                 valor_min[i] = sensores_frontais[i];
-            } else if (valor_max [i] < sensores_frontais[i]) {
+            } 
+            else if (valor_max [i] > sensores_frontais[i]) {
                 valor_max[i] = sensores_frontais [i];
             }
         }
@@ -405,7 +405,8 @@ int seta_calibracao() {
     for (int i = 0; i < 6; i++) {
         if (valor_min_abs < valor_min [i]) {
             valor_min_abs = valor_min [i];
-        } else if (valor_max_abs > valor_max [i]) {
+        }
+        else if (valor_max_abs > valor_max [i]) {
             valor_max_abs = valor_max [i];
         }
     }
@@ -416,14 +417,14 @@ int seta_calibracao() {
 int sensores() {
     seta_calibracao(); //Estabelece os limites dos sensores
 
-    //int sensores_frontais[6] = {le_ADC(0), le_ADC(1), le_ADC(2), le_ADC(3), le_ADC(4), le_ADC(6)};
-    int sensores_frontais[6] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)}; //Grogue antigo 
+    int sensores_frontais[6] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)};
     //======Estabelece o limiar da leitura dos sensores====//
     //função de correção da calibração
     for (int i = 0; i < 6; i++) {
-        if (valor_min_abs > sensores_frontais[i]) {
+        if (valor_min_abs < sensores_frontais[i]) {
             sensores_frontais[i] = valor_min_abs;
-        } else if (valor_max_abs < sensores_frontais[i]) {
+        } 
+        else if (valor_max_abs > sensores_frontais[i]) {
             sensores_frontais [i] = valor_max_abs;
         }
 
@@ -432,8 +433,6 @@ int sensores() {
         UART_enviaCaractere(0x20); //espaço
     }
     UART_enviaCaractere(0x0A); //pula linha
-
-
 }
 
 void area_de_parada() {
