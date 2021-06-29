@@ -144,7 +144,10 @@ void loop() {
 }
 
 void motor_control() {
-    sprintf(buffer, "%4d", pulse_number);
+    int rpm;
+    rpm = (pulse_number) * 150;
+    
+    sprintf(buffer, "%4d", rpm);
     UART_enviaString(buffer);
     UART_enviaCaractere(0x0D); //pula linha
 
@@ -162,11 +165,11 @@ void motor_control() {
         setDuty_2(pwm_value);
     }
 
-    //pulse_number = 0x00;
+    pulse_number = 0x00;
 }
 
 void count_pulses() {
-    int aState = (tst_bit(PIND, encoder_C1) >> encoder_C1); //lê estado do encoder_C1 e armazena em Lstate
+    /*int aState = (tst_bit(PIND, encoder_C1) >> encoder_C1); //lê estado do encoder_C1 e armazena em Lstate
 
     //if (Encoder_C1Last != Lstate) //Encoder_C1Last igual a zero e Lstate diferente de zero
     //{
@@ -180,7 +183,25 @@ void count_pulses() {
             pulse_number--;
         }
     }
-    Lstate = aState;
+    Lstate = aState;*/
+    
+    int Lstate = tst_bit(PIND, encoder_C1) >> encoder_C1;
+    
+    if(!Encoder_C1Last && Lstate){
+        int val = tst_bit(PIND, encoder_C2) >> encoder_C2;
+    
+        if(!val && direction_m) direction_m = 0;
+        
+        else if(val && !direction_m) direction_m = 1;
+    }
+    
+    Encoder_C1Last = Lstate;
+    
+    if(!direction_m) pulse_number++;
+    else             pulse_number--;
+    
+    
+    
 }
 
 void setDuty_1(int duty) //MotorA
