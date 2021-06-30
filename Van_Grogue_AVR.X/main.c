@@ -13,6 +13,8 @@
 #include <util/delay.h>     //Biblioteca geradora de atraso
 #include "UART.h"           //Biblioteca da comunicação UART
 #include "ADC.h"            //Biblioteca do conversor AD
+#include "PWM_10_bits.h"    //Biblioteca de PWM fast mode de 10 bits
+#include "Driver_motor.h"   //Biblioteca das funções de controle dos motores
 //#include "configbits.txt"   //configura os fusíveis
 
 //variáveis de comando para os registradores
@@ -21,52 +23,29 @@
 #define cpl_bit(y,bit) (y^=(1<<bit)) //troca o estado lógico do bit x da variável Y
 #define tst_bit(y,bit) (y&(1<<bit)) //retorna 0 ou 1 conforme leitura do bit
 
-
-//Lado direito
-#define AIN2 PD6
-#define AIN1 PD5 // Quando em HIGH, roda direita anda para frente 
-
-//Lado Esquerdo
-#define BIN1 PD4 
-#define BIN2 PD3 // Quando em HIGH, roda esquerda anda para frente
-
-
 #define sensor_de_curva PB0
 #define sensor_de_parada PD7
 
+//Variáveis globais do controle PID
+unsigned int Kp = 2; //prescale de 100 - prescale int
+unsigned int Kd = 1; //prescale de 100 - prescale int
+unsigned int Ki = 1; // Variáveis que são modificadas no PID - prescale de 100 ou mais
+unsigned int prescale = 2000; //prescale das constantes * prescale do erro
 
-int Kp = 2; //prescale de 100 - prescale int
-int Kd = 1; //prescale de 100 - prescale int
-int Ki = 1; // Variáveis que são modificadas no PID - prescale de 100 ou mais
-int PWMR = 400; // valor da força do motor em linha reta
-int PWM_Curva = 350; //PWM ao entrar na curva
-int erro, p, d, erroAnterior = 0, i, integral = 0, Turn = 0; //Área PID -erro também possui prescale = 100
-int u = 0; //valor de retorno do PID
-int u_curva = 0;
-int prescale = 2000; //prescale das constantes * prescale do erro
-int PWMA, PWMB; // Modulação de largura de pulso enviada pelo PID
-int PWMA_C, PWMB_C; //PWM de curva com ajuste do PID
-int entrou;
-int erroAnterior_curva = 0, erroAnterior_traseiro = 0;
-int Turn_curva, p_curva, d_curva, i_curva, integral_curva = 0;
-int position_line = 0; // Método com o Read Line - sem uso por ora
-int contador = 0, numParada = 4; // Borda
-int curvaValor = 0, entrou = 0;
-unsigned int timer2, TempoEspera = 100;
-int ejetor = 0;
-int tempo_atual = 0;
 
-int valor_max [] = {1023, 1023, 1023, 1023, 1023, 1023}; //variáveis usadas na calibração do sensores
-int valor_min [] = {0, 0, 0, 0, 0, 0};
-int valor_min_abs = 0, valor_max_abs = 1023;
+int erro = 0; //Área PID -erro também possui prescale = 100
+int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
 
-unsigned int delta_T = 0;
-int peso [] = {-3, -2, -1, 1, 2, 3}; //utilizando um prescale de 100
-int soma_direito = 0, soma_esquerdo = 0;
-int denominador_direito = 6;
-int denominador_esquerdo = 6;
-int soma_total = 0;
+//Variáveis globais da calibração de senspres
+unsigned int valor_max [] = {1023, 1023, 1023, 1023, 1023, 1023}; //variáveis usadas na calibração do sensores
+unsigned int valor_min [] = {0, 0, 0, 0, 0, 0};
+unsigned int valor_min_abs = 0, valor_max_abs = 1023;
 
+//Variáveis globais do timer0
+unsigned int millis = 0;
+unsigned int counter1 = 0, counter2 = 0;
+
+//Variáveis globais da UART
 char s [] = "Início da leitura";
 char buffer[5]; //String que armazena valores de entrada para serem printadas
 volatile char ch; //armazena o caractere lido
@@ -80,8 +59,21 @@ volatile char flag_com = 0; //flag que indica se houve recepção de dado
  Valor inicial de contagem = 256 - tempo_desejado*Fosc/Prescaler = 256 - 0,001*16000000/1024 = 255
  Valor inicial de contagem = X_bit_timer - tempo_desejado*Fosc/Prescaler*/
 
-
-unsigned int millis = 0;
+int PID(int error);
+void entrou_na_curva(int valor_erro);
+int PID_Curva(int error_curva);
+void parada(int value_erro);
+void calibra_sensores();
+void seta_calibracao();
+void sensores();
+void setup();
+void setup_Hardware();
+void setup_logica();
+void loop();
+void area_de_parada();
+void sentido_de_giro();
+void PWM_limit();
+void correcao_do_PWM();
 
 ISR(USART_RX_vect) {
     ch = UDR0; //Faz a leitura do buffer da serial
@@ -93,44 +85,23 @@ ISR(USART_RX_vect) {
 ISR(TIMER0_OVF_vect) {
     TCNT0 = 240; //Recarrega o Timer 0 para que a contagem seja 1ms novamente
     millis++; //Incrementa a variável millis a cada 1ms
+    counter1++; //incrementa a cada 1ms
+    counter2++; //increenta a cada 1ms
     sensores(); //faz a leitura dos sensores e se estiverem com valores fora do limiar, a correção será feita.
+    if(counter1 == 5) //tempo de 5ms
+    {
+        correcao_do_PWM(); //controle PID
+        PWM_limit();       //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
+    }
+    
+    if(counter2 == 20)    //chama a cada 20ms
+    {
+        area_de_parada(); //Verfica se é uma parada ou um cruzamento
+        sentido_de_giro(); //Verifica qual o sentido da curva
+    }
 }
 
-ISR(TIMER1_OVF_vect) {
-    TCNT1 = 64755; //Inicializa em 64755 com 50ms
-    correcao_do_PWM(); //controle PID
-    PWM_limit(); //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
-}
-
-ISR(TIMER2_OVF_vect) {
-    TCNT2 = 178; //Inicializa em 178 para um tempo de 5ms
-    area_de_parada(); //Verfica se é uma parada ou um cruzamento
-    sentido_de_giro(); //Verifica qual o sentido da curva
-}
 //------------------------------------------------------
-
-void setDuty_1(int duty); //Seleciona o duty cycle na saída digital  3
-void setFreq(char option); //Seleciona a frequência de operação do PWM
-void setDuty_2(int duty);
-int PID(int error);
-void frente();
-void tras();
-void esquerda();
-void direita();
-void motor_off();
-void freio();
-void entrou_na_curva(int valor_erro);
-int PID_Curva(int error_curva);
-int parada(int value_erro);
-int calibra_sensores();
-int seta_calibracao();
-int sensores();
-void setup();
-void loop();
-void area_de_parada();
-void sentido_de_giro();
-void PWM_limit();
-void correcao_do_PWM();
 
 int main(void) {
     setup();
@@ -142,12 +113,19 @@ int main(void) {
 
 void setup() {
 
+    setup_Hardware();
+    setup_logica();
+    sei(); //Habilita as interrupções
 
-    DDRD =  0b01111000; //PD3 - PD6 definidos como saída, PD7 como entrada
+}
+
+
+void setup_Hardware(){
+    DDRD = 0b01111000; //PD3 - PD6 definidos como saída, PD7 como entrada
     PORTD = 0b10000000; //inicializados em nível baixo e PD7 com pull up
-    DDRB =  0b00100110; //Habilita PB0 como entrada e PB5, PB1 e PB2 como saída
+    DDRB = 0b00100110; //Habilita PB0 como entrada e PB5, PB1 e PB2 como saída
     PORTB = 0b00000001; //PORTB inicializa desligado e pull up no PB0
-    DDRC =  0b00000000; //PORTC como entrada
+    DDRC = 0b00000000; //PORTC como entrada
     PORTC = 0b00001111; //PC3 - PC0 com pull up (colocar resistor de pull up nos pinos A6 e A7)
 
     //esquerdo pino 4 - PD2
@@ -158,25 +136,18 @@ void setup() {
     TCCR0B = 0b00000101; //TC0 com prescaler de 1024
     TCNT0 = 240; //Inicia a contagem em 100 para, no final, gerar 1ms
     TIMSK0 = 0b00000001; //habilita a interrupção do TC0
-
-    TCCR1B = 0b00000101; //TC1 com prescaler de 1024 de 50ms
-    TCNT1 = 64755; //Inicializa em 64755
-    TIMSK1 = 0b00000001; //habilita a interrupção do TC1
-
-    TCCR2B = 0b00000111; //TC2 com prescaler de 1024 com 5ms
-    TCNT2 = 178; //Inicializa em 178 para um tempo de 5ms
-    TIMSK2 = 0b00000001; //Habilita a interrupção do TC2
-
+    
     TCCR1A = 0xA2; //Configura operação em fast PWM, utilizando registradores OCR1x para comparação
 
     setFreq(4); //Seleciona opção para frequência
 
-    sei(); //Habilita as interrupções
+}
 
-
+void setup_logica(){
     //----> Calibração dos Sensores frontais <----//
     set_bit(PORTB, PB5); //subrotina de acender e apagar o LED 13
     calibra_sensores(); //calibração dos sensores
+    seta_calibracao(); //estabelece o limiar dos sensores através dos valores da função de cima
     sensores(); //determina o limiar dos sensores e printa seus valores na tela
     //========================//
 
@@ -187,141 +158,49 @@ void setup() {
     set_bit(PORTB, PB5);
     _delay_ms(500);
     clr_bit(PORTB, PB5);
-
-
+    _delay_ms(2000);
+    
+    
 }
+
 
 void loop() {
 
-
-    
-
-    //----------------------------------------------------------------//
-
 }
 
-void setDuty_2(int duty) //MotorB
-{
 
-    OCR1B = duty;
-
-} //end setDuty
-
-void setDuty_1(int duty) //MotorA
-{
-
-    OCR1A = duty; //valores de 0 - 1023
-
-} //end setDuty
-
-void setFreq(char option) {
-    /*
-    TABLE:
-  
-        option  frequency (as frequências no timer 1 são menores do que as frequências nos timers 0 e 2)
-        
-          1      16    kHz
-          2       2    kHz
-          3     250     Hz
-          4     62,5    Hz
-          5     15,6    Hz
-     */
-    TCCR1B = option;
-
-} //end setFrequency
 
 int PID(int error) {
-    p = (error * Kp) / prescale; // Proporcao
+    unsigned int *Kp_reta, *Kd_reta, *Ki_reta;
+    Kp_reta = &Kp;
+    Kd_reta = &Kd;
+    Ki_reta  = &Ki;
+    static int integral = 0, erroAnterior = 0;
+    int p = 0, i = 0, d = 0, Turn = 0;
+    
+    p = (error * *Kp_reta); // Proporcao
 
     integral += error; // Integral
-    i = ((Ki * integral) / prescale);
+    i = (*Ki_reta * integral);
 
-    d = ((Kd * (error - erroAnterior)) / prescale); // Derivada
+    d = (*Kd_reta * (error - erroAnterior)); // Derivada
     erroAnterior = error;
 
-    Turn = p + i + d;
+    Turn = (p + i + d) / prescale;
     return Turn; //retorna os valores após o PID
 }
 
-void frente() {
-
-    set_bit(PORTD, AIN1); //frente direita
-    clr_bit(PORTD, AIN2);
-    set_bit(PORTD, BIN2); //frente esquerda
-    clr_bit(PORTD, BIN1);
-}
-
-void tras() {
-    clr_bit(PORTD, AIN1);
-    set_bit(PORTD, AIN2); //tras direita
-    clr_bit(PORTD, BIN2);
-    set_bit(PORTD, BIN1); //tras esquerda
-
-}
-
-void motor_off() {
-    clr_bit(PORTD, AIN1);
-    clr_bit(PORTD, AIN2);
-    clr_bit(PORTD, BIN2);
-    clr_bit(PORTD, BIN1);
-}
-
-void freio() {
-    frente();
-
-    setDuty_1(200);
-    setDuty_2(200);
-
-    _delay_ms(500);
-
-    tras();
-
-    setDuty_1(150);
-    setDuty_2(150);
-
-    _delay_ms(5);
-
-    frente();
-
-    setDuty_1(0);
-    setDuty_2(0);
-
-    _delay_ms(2000);
-
-    motor_off();
-
-    _delay_ms(60000);
-}
-
-/*void direita() {
-    set_bit(PORTD, AIN1); //frente direita
-    clr_bit(PORTD, AIN2); //tras direita 
-    set_bit(PORTD, BIN2);
-    clr_bit(PORTD, BIN1); //frente esquerda
-
-    setDuty_1(PWMA_C);
-    setDuty_2(PWMB_C);
-
-    //calibração dos sensores frontais - seta o valor médio
-}*/
-
-/*void esquerda() {
-    set_bit(PORTD, AIN1); //direita frente
-    clr_bit(PORTD, AIN2); //direita tras
-    set_bit(PORTD, BIN2);
-    clr_bit(PORTD, BIN1); //esquerda frente
-
-    setDuty_1(PWMA_C);
-    setDuty_2(PWMB_C);
 
 
-    //calibração dos sensores frontais - seta o valor médio
-}*/
 
 //=========Funções visíveis ao usuário===========//
 
 void entrou_na_curva(int valor_erro) {
-    if ((!tst_bit(PINB, sensor_de_curva) >> sensor_de_curva) && tst_bit(PIND, sensor_de_parada) >> sensor_de_parada)
+    int u_curva = 0;
+    static unsigned int PWMA_C = 0, PWMB_C = 0, entrou = 0; //PWM de curva com ajuste do PID;
+    static unsigned int PWM_Curva = 350; //PWM ao entrar na curva
+
+    if ((!tst_bit(PINB, sensor_de_curva)) && tst_bit(PIND, sensor_de_parada))
         //li branco no sensor de curva e li preto no sensor de parada
     {
         switch (entrou) {
@@ -347,23 +226,33 @@ void entrou_na_curva(int valor_erro) {
 }
 
 int PID_Curva(int error_curva) {
-    p_curva = (error_curva * Kp) / prescale; // Proporcao
+    static int integral_curva = 0, erroAnterior_curva = 0;
+    int p_curva = 0, d_curva = 0, i_curva = 0, Turn_curva = 0;
+    unsigned int *Kp_curva, *Kd_curva, *Ki_curva;   //ponteiros das constantes do PID
+    Kp_curva = &Kp;     //atrelando o endereço de memória aos ponteiros
+    Kd_curva = &Kd;
+    Ki_curva  = &Ki;
+    
+    p_curva = (error_curva * *Kp_curva); // Proporcao
 
     integral_curva += error_curva; // Integral
-    i_curva = ((Ki * integral_curva) / prescale);
+    i_curva = (*Ki_curva * integral_curva);
 
-    d_curva = ((Kd * (error_curva - erroAnterior_curva)) / prescale); // Derivada
+    d_curva = (*Kd_curva * (error_curva - erroAnterior_curva)); // Derivada
     erroAnterior_curva = error_curva;
 
-    Turn_curva = p_curva + i_curva + d_curva;
+    Turn_curva = (p_curva + i_curva + d_curva) / prescale;
     return Turn_curva; //retorna os valores após o PID
 }
 
-int parada(int value_erro) {
-    if ((!tst_bit(PINB, sensor_de_curva) >> sensor_de_curva) && tst_bit(PIND, sensor_de_parada) >> sensor_de_parada) {
+void parada(int value_erro) {
+
+    static char contador = 0, numParada = 4; // Borda   //contador - número de marcadores de curva;
+
+    if ((!tst_bit(PINB, sensor_de_curva)) && tst_bit(PIND, sensor_de_parada)) {
         contador++;
         entrou_na_curva(value_erro); // Verifica se é uma curva
-    } else if ((!tst_bit(PINB, sensor_de_curva) >> sensor_de_curva) && (!tst_bit(PIND, sensor_de_parada) >> sensor_de_parada)) //verifica se é crizamento
+    } else if ((!tst_bit(PINB, sensor_de_curva)) && (!tst_bit(PIND, sensor_de_parada))) //verifica se é crizamento
     {
         frente();
         setDuty_1(PWMA);
@@ -375,39 +264,37 @@ int parada(int value_erro) {
     }
 }
 
-int calibra_sensores() {
-    int calibrado = 0;
+void calibra_sensores() {
     //=====Função que inicializa a calibração====//
     for (int i = 0; i < 120; i++) {
         int sensores_frontais[] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)};
         for (int i = 0; i < 6; i++) {
             if (valor_min [i] < sensores_frontais [i]) {
                 valor_min[i] = sensores_frontais[i];
-            } 
+            }
             else if (valor_max [i] > sensores_frontais[i]) {
                 valor_max[i] = sensores_frontais [i];
             }
         }
 
+        _delay_ms(10);  //tempo o suficiente para o pessoa calibrar os sensores mecanicamente
+        
         /*
         Após isso determinar o limiar de todos os sensores para que eles tenham os mesmos valores do AD. 
         Para que todos tenham um limite inferior e superior igual.
          */
     }
 
-    calibrado = seta_calibracao();
-    return calibrado;
 }
 
-int seta_calibracao() {
-    //----> Calibração dos Sensores frontais <----\\
+void seta_calibracao() {
+    //----> Calibração dos Sensores frontais <----//
 
     //função que seta o limiar dos sensores
     for (int i = 0; i < 6; i++) {
         if (valor_min_abs < valor_min [i]) {
             valor_min_abs = valor_min [i];
-        }
-        else if (valor_max_abs > valor_max [i]) {
+        } else if (valor_max_abs > valor_max [i]) {
             valor_max_abs = valor_max [i];
         }
     }
@@ -415,8 +302,7 @@ int seta_calibracao() {
     //return (valor_min_abs, valor_max_abs);
 }
 
-int sensores() {
-    seta_calibracao(); //Estabelece os limites dos sensores
+void sensores() {
 
     int sensores_frontais[6] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)};
     //======Estabelece o limiar da leitura dos sensores====//
@@ -424,7 +310,7 @@ int sensores() {
     for (int i = 0; i < 6; i++) {
         if (valor_min_abs < sensores_frontais[i]) {
             sensores_frontais[i] = valor_min_abs;
-        } 
+        }
         else if (valor_max_abs > sensores_frontais[i]) {
             sensores_frontais [i] = valor_max_abs;
         }
@@ -438,12 +324,16 @@ int sensores() {
 
 void area_de_parada() {
     //--------------->AREA DOS SENSORES<---------------
+    static int ejetor = 0;
+    static unsigned int delta_T = 0;
+    static unsigned int tempo_atual = 0;
+    static unsigned int timer2, TempoEspera = 100;
+    
     tempo_atual = millis;
     delta_T = tempo_atual - timer2;
     switch (ejetor) {
         case 0:
-            if ((!(tst_bit(PINB, sensor_de_curva) >> sensor_de_curva))
-                    || (!(tst_bit(PIND, sensor_de_parada) >> sensor_de_parada)))//verifica se sos sensores estão em nível 0
+            if ((!(tst_bit(PINB, sensor_de_curva))) || (!(tst_bit(PIND, sensor_de_parada))))//verifica se sos sensores estão em nível 0
             {
                 timer2 = tempo_atual;
                 ejetor = 1;
@@ -458,8 +348,7 @@ void area_de_parada() {
             break;
 
         case 2:
-            if ((tst_bit(PINB, sensor_de_curva) >> sensor_de_curva)
-                    && (tst_bit(PIND, sensor_de_parada) >> sensor_de_parada)) {
+            if ((tst_bit(PINB, sensor_de_curva)) && (tst_bit(PIND, sensor_de_parada))) {
                 timer2 = 0;
                 ejetor = 0;
             }
@@ -467,44 +356,53 @@ void area_de_parada() {
     }
 }
 
-void sentido_de_giro() {
-    //-----> Área do senstido de giro
+    void sentido_de_giro() {
+        //-----> Área do senstido de giro
 
-    if (erro < 0) //virar para a esquerda
-    {
-        entrou_na_curva(erro);
-        set_bit(PORTB, PB5); //liga o LED
-        /*while (erro < 0) {
-            frente();
-            setDuty_1(PWMA_C);
-            setDuty_2(PWMB_C);
-        }*/
 
-    } else if (erro > 0) {
-        entrou_na_curva(erro);
-        set_bit(PORTB, PB5); //liga o LED
-        /*while (erro > 0) {
-            frente();
-            setDuty_1(PWMA_C);
-            setDuty_2(PWMB_C);
-        }*/
+        if (erro < 0) //virar para a esquerda
+        {
+            entrou_na_curva(erro);
+            set_bit(PORTB, PB5); //liga o LED
+            /*while (erro < 0) {
+                frente();
+                setDuty_1(PWMA_C);
+                setDuty_2(PWMB_C);
+            }*/
+
+        } 
+        else if (erro > 0) { //cirar para a direita
+            entrou_na_curva(erro);
+            set_bit(PORTB, PB5); //liga o LED
+            /*while (erro > 0) {
+                frente();
+                setDuty_1(PWMA_C);
+                setDuty_2(PWMB_C);
+            }*/
+        }
+
+        //A função que fazia o robô rodar em seu próprio eixo foi removida
+
     }
-
-    //A função que fazia o robô rodar em seu próprio eixo foi removida
-
-}
 
 void PWM_limit() {
     //------> Limitando PWM
 
-    if (PWMA > 255) {
-        PWMA = 250;
-    } else if (PWMB > 255) {
-        PWMB = 250;
+    if (PWMA > 1023) {
+        PWMA = 1000;
+    } else if (PWMB > 1023) {
+        PWMB = 1000;
     }
 }
 
 void correcao_do_PWM() {
+
+    int soma_direito = 0, soma_esquerdo = 0, denominador_direito = 6, denominador_esquerdo = 6, soma_total = 0;
+    static unsigned int PWMR = 400; // valor da força do motor em linha reta
+    int u = 0; //valor de retorno do PID
+    
+    static int peso [] = {-3, -2, -1, 1, 2, 3}; //utilizando um prescale de 2000
+
     int sensores_frontais[6] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)};
     for (int j = 0; j < 3; j++) {
         soma_esquerdo += (sensores_frontais[j] * peso[j]);
@@ -513,7 +411,7 @@ void correcao_do_PWM() {
 
     soma_total = (soma_esquerdo + soma_direito) / (denominador_esquerdo + denominador_direito);
 
-    erro = 0 - soma_total; //valor esperado(estar sempre em cima da linha) - valor medido
+    erro = 0 - soma_total;   //valor esperado(estar sempre em cima da linha) - valor medido
 
     /*sprintf(buffer, "%5d\n", erro); //Converte para string
     UART_enviaString(buffer); //Envia para o computador
@@ -521,19 +419,10 @@ void correcao_do_PWM() {
 
     //--------------->AREA DO PID<---------------
 
-    soma_esquerdo = 0;
-    soma_direito = 0;
-    soma_total = 0;
-
     u = PID(erro);
 
     PWMA = PWMR - u;
     PWMB = PWMR + u;
-
-    /*if (delta_T >= TempoEspera) {   //Sem uso no momento, reservado para o encoder
-
-        timer2 = 0;
-    }*/
 
     frente();
     setDuty_1(PWMA);
