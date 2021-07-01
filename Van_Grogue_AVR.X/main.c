@@ -30,10 +30,10 @@
 unsigned int Kp = 2; //prescale de 100 - prescale int
 unsigned int Kd = 1; //prescale de 100 - prescale int
 unsigned int Ki = 1; // Variáveis que são modificadas no PID - prescale de 100 ou mais
-unsigned int prescale = 2000; //prescale das constantes * prescale do erro
+unsigned int prescale = 2048; //prescale na potência de 2: 2^n
 
 
-int erro = 0; //Área PID -erro também possui prescale = 100
+int erro = 0; //Área PID
 int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
 
 //Variáveis globais da calibração de senspres
@@ -92,12 +92,14 @@ ISR(TIMER0_OVF_vect) {
     {
         correcao_do_PWM(); //controle PID
         PWM_limit();       //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
+        counter1 = 0;
     }
     
     if(counter2 == 20)    //chama a cada 20ms
     {
         area_de_parada(); //Verfica se é uma parada ou um cruzamento
         sentido_de_giro(); //Verifica qual o sentido da curva
+        counter2 = 0;
     }
 }
 
