@@ -152,7 +152,8 @@ void setup_logica(){
     seta_calibracao(); //estabelece o limiar dos sensores através dos valores da função de cima
     sensores(); //determina o limiar dos sensores e printa seus valores na tela
     //========================//
-
+    clr_bit(PORTB, PB5);
+    _delay_ms(500);
     set_bit(PORTB, PB5); //subrotina de acender e apagar o LED 13
     _delay_ms(1000);
     clr_bit(PORTB, PB5);
