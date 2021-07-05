@@ -61,9 +61,9 @@ void freio() {
 
     _delay_ms(60000);*/
     
+    motor_off();        //desliga os motores para deoxar o próprio atrito frear o robô
     setDuty_1(0);
     setDuty_2(0);
-    motor_off();        //desliga os motores para deoxar o próprio atrito frear o robô
     _delay_ms(10000);
     
 }
