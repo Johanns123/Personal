@@ -1,11 +1,12 @@
 /*
  * File:   main.c
- * Author: johan
+ * Author: Johann
  *
  * Created on 30 de Maio de 2021, 16:52
+ * Last update on July 7th of 2021 at 15:43
  */
 
-
+/*Bibliotecas e frequência do uc*/
 #define F_CPU 16000000      //define a frequencia do uC para 16MHz
 #include <avr/io.h>         //Biblioteca geral dos AVR
 #include <avr/interrupt.h>  //Biblioteca de interrupção
@@ -16,27 +17,27 @@
 #include "PWM_10_bits.h"    //Biblioteca de PWM fast mode de 10 bits
 #include "Driver_motor.h"   //Biblioteca das funções de controle dos motores
 //#include "configbits.txt"   //configura os fusíveis
+/*============================================================*/
+
 
 //variáveis de comando para os registradores
 #define set_bit(y,bit) (y|=(1<<bit)) //coloca em 1 o bit x da variável Y
 #define clr_bit(y,bit) (y&=~(1<<bit)) //coloca em 0 o bit x da variável Y
 #define cpl_bit(y,bit) (y^=(1<<bit)) //troca o estado lógico do bit x da variável Y
 #define tst_bit(y,bit) (y&(1<<bit)) //retorna 0 ou 1 conforme leitura do bit
+/*==============================================================*/
 
-#define sensor_de_curva PB0
+/*Mapeamento de Hardware*/
+#define sensor_de_curva  PB0
 #define sensor_de_parada PD7
+#define led              PB5
+/*==============================================================*/
 
-//Variáveis globais do controle PID
-unsigned int Kp = 2; //prescale de 100 - prescale int
-unsigned int Kd = 1; //prescale de 100 - prescale int
-unsigned int Ki = 1; // Variáveis que são modificadas no PID - prescale de 100 ou mais
-unsigned int prescale = 2048; //prescale na potência de 2: 2^n
-
-
+/*Variáveis globais*/
 int erro = 0; //Área PID
 int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
 
-//Variáveis globais da calibração de senspres
+//Variáveis globais da calibração de sensores
 unsigned int valor_max [] = {1023, 1023, 1023, 1023, 1023, 1023}; //variáveis usadas na calibração do sensores
 unsigned int valor_min [] = {0, 0, 0, 0, 0, 0};
 unsigned int valor_min_abs = 0, valor_max_abs = 1023;
@@ -51,17 +52,20 @@ char buffer[5]; //String que armazena valores de entrada para serem printadas
 volatile char ch; //armazena o caractere lido
 volatile char flag_com = 0; //flag que indica se houve recepção de dado
 // Interrupção da UART
-//======================================================
 
 
-/*tempo =65536 ? Prescaler/Fosc = 65536 ? 1024/16000000 = 4, 19s
+/*======================================================*/
+
+
+/*tempo =65536 * Prescaler/Fosc = 65536 * 1024/16000000 = 4, 19s
  tempo = X_bit_timer * Prescaler/Fosc
  Valor inicial de contagem = 256 - tempo_desejado*Fosc/Prescaler = 256 - 0,001*16000000/1024 = 255
- Valor inicial de contagem = X_bit_timer - tempo_desejado*Fosc/Prescaler*/
+ Valor inicial de contagem = X_bit_timer - tempo_desejado*Fosc/Prescaler */
+/*===========================================================================*/
 
+/*Protótipo das funções*/
 int PID(int error);
 void entrou_na_curva(int valor_erro);
-int PID_Curva(int error_curva);
 void parada(int value_erro);
 void calibra_sensores();
 void seta_calibracao();
@@ -74,7 +78,10 @@ void area_de_parada();
 void sentido_de_giro();
 void PWM_limit();
 void correcao_do_PWM();
+/*===========================================================================*/
 
+
+/*Interrupções*/
 ISR(USART_RX_vect) {
     ch = UDR0; //Faz a leitura do buffer da serial
 
@@ -101,15 +108,17 @@ ISR(TIMER0_OVF_vect) {
         sentido_de_giro(); //Verifica qual o sentido da curva
         counter2 = 0;
     }
-}
+}//end TIMER_0
 
-//------------------------------------------------------
+/*============================================================================*/
 
+
+/*Função principal*/
 int main(void) {
     setup();
 
     while (1) loop();
-}
+}//end main
 
 //===Funções não visíveis ao usuário======//
 
@@ -147,53 +156,51 @@ void setup_Hardware(){
 
 void setup_logica(){
     //----> Calibração dos Sensores frontais <----//
-    set_bit(PORTB, PB5); //subrotina de acender e apagar o LED 13
+    set_bit(PORTB, led); //subrotina de acender e apagar o LED 13
     calibra_sensores(); //calibração dos sensores
     seta_calibracao(); //estabelece o limiar dos sensores através dos valores da função de cima
     sensores(); //determina o limiar dos sensores e printa seus valores na tela
-    //========================//
-    clr_bit(PORTB, PB5);
+    
+    clr_bit(PORTB, led);
     _delay_ms(500);
-    set_bit(PORTB, PB5); //subrotina de acender e apagar o LED 13
+    set_bit(PORTB, led); //subrotina de acender e apagar o LED 13
     _delay_ms(1000);
-    clr_bit(PORTB, PB5);
+    clr_bit(PORTB, led);
     _delay_ms(500);
-    set_bit(PORTB, PB5);
+    set_bit(PORTB, led);
     _delay_ms(500);
-    clr_bit(PORTB, PB5);
+    clr_bit(PORTB, led);
     _delay_ms(2000);
     
     
 }
 
 
-void loop() {
+void loop()//loop vazio
+{
 
 }
 
 
 
-int PID(int error) {
-    unsigned int *Kp_reta, *Kd_reta, *Ki_reta;
-    Kp_reta = &Kp;
-    Kd_reta = &Kd;
-    Ki_reta  = &Ki;
+int PID(int error)/*Algoritmo de controle PID usando os sensores frontais*/
+{
+    static unsigned int Kp = 2, Kd = 0, Ki = 0;
+    static unsigned int prescale = 2048; //prescale na potência de 2: 2^n
     static int integral = 0, erroAnterior = 0;
     int p = 0, i = 0, d = 0, Turn = 0;
     
-    p = (error * *Kp_reta); // Proporcao
+    p = (error * Kp); // Proporcao
 
     integral += error; // Integral
-    i = (*Ki_reta * integral);
+    i = (Ki * integral);
 
-    d = (*Kd_reta * (error - erroAnterior)); // Derivada
+    d = (Kd * (error - erroAnterior)); // Derivada
     erroAnterior = error;
 
     Turn = (p + i + d) / prescale;
     return Turn; //retorna os valores após o PID
 }
-
-
 
 
 //=========Funções visíveis ao usuário===========//
@@ -208,7 +215,7 @@ void entrou_na_curva(int valor_erro) {
     {
         switch (entrou) {
             case 0: //entrou na curva
-                u_curva = PID_Curva(valor_erro);
+                u_curva = PID(valor_erro);
                 PWMA_C = PWM_Curva - u_curva;
                 PWMB_C = PWM_Curva + u_curva;
                 frente();
@@ -222,31 +229,12 @@ void entrou_na_curva(int valor_erro) {
                 frente();
                 setDuty_1(PWMA); //témino da curva
                 setDuty_2(PWMB);
-                clr_bit(PORTB, PB5);
+                clr_bit(PORTB, led);
                 break;
         }
     }
 }
 
-int PID_Curva(int error_curva) {
-    static int integral_curva = 0, erroAnterior_curva = 0;
-    int p_curva = 0, d_curva = 0, i_curva = 0, Turn_curva = 0;
-    unsigned int *Kp_curva, *Kd_curva, *Ki_curva;   //ponteiros das constantes do PID
-    Kp_curva = &Kp;     //atrelando o endereço de memória aos ponteiros
-    Kd_curva = &Kd;
-    Ki_curva  = &Ki;
-    
-    p_curva = (error_curva * *Kp_curva); // Proporcao
-
-    integral_curva += error_curva; // Integral
-    i_curva = (*Ki_curva * integral_curva);
-
-    d_curva = (*Kd_curva * (error_curva - erroAnterior_curva)); // Derivada
-    erroAnterior_curva = error_curva;
-
-    Turn_curva = (p_curva + i_curva + d_curva) / prescale;
-    return Turn_curva; //retorna os valores após o PID
-}
 
 void parada(int value_erro) {
 
@@ -301,8 +289,6 @@ void seta_calibracao() {
             valor_max_abs = valor_max [i];
         }
     }
-    //valores que os sensores não poderiam ultrapassar
-    //return (valor_min_abs, valor_max_abs);
 }
 
 void sensores() {
@@ -366,7 +352,7 @@ void area_de_parada() {
         if (erro < 0) //virar para a esquerda
         {
             entrou_na_curva(erro);
-            set_bit(PORTB, PB5); //liga o LED
+            set_bit(PORTB, led); //liga o LED
             /*while (erro < 0) {
                 frente();
                 setDuty_1(PWMA_C);
@@ -376,7 +362,7 @@ void area_de_parada() {
         } 
         else if (erro > 0) { //cirar para a direita
             entrou_na_curva(erro);
-            set_bit(PORTB, PB5); //liga o LED
+            set_bit(PORTB, led); //liga o LED
             /*while (erro > 0) {
                 frente();
                 setDuty_1(PWMA_C);
@@ -430,4 +416,4 @@ void correcao_do_PWM() {
     frente();
     setDuty_1(PWMA);
     setDuty_2(PWMB);
-}
+}//fim do programa
