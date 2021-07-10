@@ -16,6 +16,7 @@
 #include "ADC.h"            //Biblioteca do conversor AD
 #include "PWM_10_bits.h"    //Biblioteca de PWM fast mode de 10 bits
 #include "Driver_motor.h"   //Biblioteca das funções de controle dos motores
+#include "PID.h"            //Biblioteca do controle PID
 //#include "configbits.txt"   //configura os fusíveis
 /*============================================================*/
 
@@ -28,9 +29,12 @@
 /*==============================================================*/
 
 /*Mapeamento de Hardware*/
-#define sensor_de_curva  PB0
-#define sensor_de_parada PD7
-#define led              PB5
+#define sensor_de_curva   PB0
+#define sensor_de_parada  PD7
+#define led               PB5
+#define leitura_curva    PINB
+#define leitura_parada   PIND
+
 /*==============================================================*/
 
 /*Variáveis globais*/
@@ -64,7 +68,6 @@ volatile char flag_com = 0; //flag que indica se houve recepção de dado
 /*===========================================================================*/
 
 /*Protótipo das funções*/
-int PID(int error);
 void entrou_na_curva(int valor_erro);
 void parada(int value_erro);
 void calibra_sensores();
@@ -181,28 +184,6 @@ void loop()//loop vazio
 
 }
 
-
-
-int PID(int error)/*Algoritmo de controle PID usando os sensores frontais*/
-{
-    static unsigned int Kp = 2, Kd = 0, Ki = 0;
-    static unsigned int prescale = 2048; //prescale na potência de 2: 2^n
-    static int integral = 0, erroAnterior = 0;
-    int p = 0, i = 0, d = 0, Turn = 0;
-    
-    p = (error * Kp); // Proporcao
-
-    integral += error; // Integral
-    i = (Ki * integral);
-
-    d = (Kd * (error - erroAnterior)); // Derivada
-    erroAnterior = error;
-
-    Turn = (p + i + d) / prescale;
-    return Turn; //retorna os valores após o PID
-}
-
-
 //=========Funções visíveis ao usuário===========//
 
 void entrou_na_curva(int valor_erro) {
@@ -210,7 +191,7 @@ void entrou_na_curva(int valor_erro) {
     static unsigned int PWMA_C = 0, PWMB_C = 0, entrou = 0; //PWM de curva com ajuste do PID;
     static unsigned int PWM_Curva = 350; //PWM ao entrar na curva
 
-    if ((!tst_bit(PINB, sensor_de_curva)) && tst_bit(PIND, sensor_de_parada))
+    if ((!tst_bit(leitura_curva, sensor_de_curva)) && tst_bit(leitura_parada, sensor_de_parada))
         //li branco no sensor de curva e li preto no sensor de parada
     {
         switch (entrou) {
@@ -240,10 +221,10 @@ void parada(int value_erro) {
 
     static char contador = 0, numParada = 4; // Borda   //contador - número de marcadores de curva;
 
-    if ((!tst_bit(PINB, sensor_de_curva)) && tst_bit(PIND, sensor_de_parada)) {
+    if ((!tst_bit(leitura_curva, sensor_de_curva)) && tst_bit(leitura_parada, sensor_de_parada)) {
         contador++;
         entrou_na_curva(value_erro); // Verifica se é uma curva
-    } else if ((!tst_bit(PINB, sensor_de_curva)) && (!tst_bit(PIND, sensor_de_parada))) //verifica se é crizamento
+    } else if ((!tst_bit(leitura_curva, sensor_de_curva)) && (!tst_bit(leitura_parada, sensor_de_parada))) //verifica se é crizamento
     {
         frente();
         setDuty_1(PWMA);
@@ -322,7 +303,7 @@ void area_de_parada() {
     delta_T = tempo_atual - timer2;
     switch (ejetor) {
         case 0:
-            if ((!(tst_bit(PINB, sensor_de_curva))) || (!(tst_bit(PIND, sensor_de_parada))))//verifica se sos sensores estão em nível 0
+            if ((!(tst_bit(leitura_curva, sensor_de_curva))) || (!(tst_bit(leitura_parada, sensor_de_parada))))//verifica se sos sensores estão em nível 0
             {
                 timer2 = tempo_atual;
                 ejetor = 1;
@@ -337,7 +318,7 @@ void area_de_parada() {
             break;
 
         case 2:
-            if ((tst_bit(PINB, sensor_de_curva)) && (tst_bit(PIND, sensor_de_parada))) {
+            if ((tst_bit(leitura_curva, sensor_de_curva)) && (tst_bit(leitura_parada, sensor_de_parada))) {
                 timer2 = 0;
                 ejetor = 0;
             }
