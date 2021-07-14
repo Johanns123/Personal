@@ -303,7 +303,7 @@ void area_de_parada() {
     delta_T = tempo_atual - timer2;
     switch (ejetor) {
         case 0:
-            if ((!(tst_bit(leitura_curva, sensor_de_curva))) || (!(tst_bit(leitura_parada, sensor_de_parada))))//verifica se sos sensores estão em nível 0
+            if ((tst_bit(leitura_curva, sensor_de_curva)) || (tst_bit(leitura_parada, sensor_de_parada)))//verifica se sos sensores estão em nível 0
             {
                 timer2 = tempo_atual;
                 ejetor = 1;
@@ -313,16 +313,18 @@ void area_de_parada() {
         case 1:
             if ((delta_T) > TempoEspera) {
                 parada(erro); // Verifica se é um marcador de parada
-                ejetor = 2;
+                timer2 = 0;
+                ejetor = 0;
+                //ejetor = 2;
             }
             break;
 
-        case 2:
+        /*case 2:
             if ((tst_bit(leitura_curva, sensor_de_curva)) && (tst_bit(leitura_parada, sensor_de_parada))) {
                 timer2 = 0;
                 ejetor = 0;
             }
-            break;
+            break;*/
     }
 }
 
