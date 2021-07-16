@@ -92,7 +92,7 @@ void entrou_na_curva(int valor_erro, int PWM_Curva);
 void parada(int value_erro, int PWM_Curva);
 void calibra_sensores();
 void seta_calibracao();
-int sensores(int index);
+int sensores();
 void setup();
 void setup_Hardware();
 void setup_logica();
@@ -603,9 +603,10 @@ void seta_calibracao() {
     }
 }
 
-int sensores(int index) 
+int sensores() 
 {
-
+    int soma_direito = 0, soma_esquerdo = 0, denominador_direito = 6, denominador_esquerdo = 6, soma_total = 0;
+    static int peso [] = {-3, -2, -1, 1, 2, 3}; //utilizando um prescale de 2000
     int sensores_frontais[6] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)};
     //======Estabelece o limiar da leitura dos sensores====//
     //função de correção da calibração
@@ -620,7 +621,16 @@ int sensores(int index)
             sensores_frontais [i] = valor_max_abs;
         }
     }
-    return sensores_frontais[index];
+    
+        
+    for (int j = 0; j < 3; j++)
+    {
+        soma_esquerdo += (sensores_frontais[j] * peso[j]);
+        soma_direito += (sensores_frontais[5 - j] * peso[5 - j]);
+    }
+
+    soma_total = (soma_esquerdo + soma_direito) / (denominador_esquerdo + denominador_direito);
+    return soma_total;
 }
 
 void area_de_parada(int PWM_Curva)
@@ -708,27 +718,21 @@ void PWM_limit() {
 
 void correcao_do_PWM(int PWMR)
 {
-
-    int soma_direito = 0, soma_esquerdo = 0, denominador_direito = 6, denominador_esquerdo = 6, soma_total = 0;
+    int soma_total = 0;
     int u = 0, u_encD = 0, u_encE = 0; //valor de retorno do PID
-
-    static int peso [] = {-3, -2, -1, 1, 2, 3}; //utilizando um prescale de 2000
-    int sensores_frontais[6];
     //sensores_frontais[6] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)}
     
-    for(int i = 0; i < 6; i++)
-    {
-     sensores_frontais[i] = sensores(i);    
-    }
     
-    for (int j = 0; j < 3; j++)
+    /*for (int j = 0; j < 3; j++)
     {
         soma_esquerdo += (sensores_frontais[j] * peso[j]);
         soma_direito += (sensores_frontais[5 - j] * peso[5 - j]);
     }
 
-    soma_total = (soma_esquerdo + soma_direito) / (denominador_esquerdo + denominador_direito);
-
+    soma_total = (soma_esquerdo + soma_direito) / (denominador_esquerdo + denominador_direito);*/
+    
+    soma_total = sensores();
+    
     erro = 0 - soma_total; //valor esperado(estar sempre em cima da linha) - valor medido
 
     //--------------->AREA DO PID<---------------
