@@ -40,6 +40,7 @@
 /*Variáveis globais*/
 int erro = 0; //Área PID
 int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
+int *ptr = NULL;                                        //ponteiro utilizado para receber os valores dos sensores frontais
 
 //Variáveis globais da calibração de sensores
 unsigned int valor_max [] = {1023, 1023, 1023, 1023, 1023, 1023}; //variáveis usadas na calibração do sensores
@@ -275,6 +276,7 @@ void seta_calibracao() {
 void sensores() {
 
     int sensores_frontais[6] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)};
+    ptr = sensores_frontais;
     //======Estabelece o limiar da leitura dos sensores====//
     //função de correção da calibração
     for (int i = 0; i < 6; i++) {
@@ -285,11 +287,7 @@ void sensores() {
             sensores_frontais [i] = valor_max_abs;
         }
 
-        sprintf(buffer, "%4d", sensores_frontais[i]); //Converte para string
-        UART_enviaString(buffer); //Envia para o computador
-        UART_enviaCaractere(0x20); //espaço
     }
-    UART_enviaCaractere(0x0A); //pula linha
 }
 
 void area_de_parada() {
@@ -375,10 +373,9 @@ void correcao_do_PWM() {
     
     static int peso [] = {-3, -2, -1, 1, 2, 3}; //utilizando um prescale de 2000
 
-    int sensores_frontais[6] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)};
     for (int j = 0; j < 3; j++) {
-        soma_esquerdo += (sensores_frontais[j] * peso[j]);
-        soma_direito += (sensores_frontais[5 - j] * peso[5 - j]);
+        soma_esquerdo += (*(ptr+j) * peso[j]);
+        soma_direito += (*(ptr + (5-j)) * peso[5 - j]);
     }
 
     soma_total = (soma_esquerdo + soma_direito) / (denominador_esquerdo + denominador_direito);
