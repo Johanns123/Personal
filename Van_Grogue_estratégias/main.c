@@ -51,6 +51,7 @@ int PWMA = 0, PWMB = 0;                                 // Modulação de largura 
 int curva1 = 0, curva2;
 char flag = 0;
 int pulse_numberD = 0, pulse_numberE = 0;               //variáveis para contagem dos pulsos dos encoders
+int *ptr = NULL;                                        //ponteiro utilizado para receber os valores dos sensores frontais
 
 //Variáveis globais da calibração de sensores
 unsigned int valor_max [] = {1023, 1023, 1023, 1023, 1023, 1023}; //variáveis usadas na calibração do sensores
@@ -92,7 +93,7 @@ void entrou_na_curva(int valor_erro, int PWM_Curva);
 void parada(int value_erro, int PWM_Curva);
 void calibra_sensores();
 void seta_calibracao();
-int sensores();
+void sensores();
 void setup();
 void setup_Hardware();
 void setup_logica();
@@ -184,7 +185,7 @@ void setup_logica()
     set_bit(PORTB, led);                                //subrotina de acender e apagar o LED 13
     calibra_sensores();                                 //calibração dos sensores
     seta_calibracao();                                  //estabelece o limiar dos sensores através dos valores da função de cima
-    //sensores();                                         //determina o limiar dos sensores e printa seus valores na tela
+    sensores();                                         //determina o limiar dos sensores e printa seus valores na tela
 
     clr_bit(PORTB, led);
     _delay_ms(500);
@@ -252,12 +253,12 @@ void mapeamento()
     counter1++;
     counter2++;
 
-    //sensores();                                         //faz a leitura dos sensores e se estiverem com valores fora do limiar, a correção será feita.
+    sensores();                                         //faz a leitura dos sensores e se estiverem com valores fora do limiar, a correção será feita.
     
-    correcao_do_PWM(PWMR);                          //controle PID
+    //correcao_do_PWM(PWMR);                          //controle PID
     if (counter1 == 5)                                  //chamado a cada 5ms
     {
-        //correcao_do_PWM(PWMR);
+        correcao_do_PWM(PWMR);
         sprintf(buffer, "%5d\n", erro);                 //Converte para string
         UART_enviaString(buffer);                       //Envia para o computador
         UART_enviaCaractere(0x0D);                      //pula linha
@@ -285,14 +286,14 @@ void coleta_de_dados()
     counter1++;
     counter2++;
 
-    //sensores();                                         //faz a leitura dos sensores e se estiverem com valores fora do limiar, a correção será feita.
-    correcao_do_PWM(PWMR);                          //controle PID
-    PWM_limit();                                    //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
+    sensores();                                         //faz a leitura dos sensores e se estiverem com valores fora do limiar, a correção será feita.
+    //correcao_do_PWM(PWMR);                          //controle PID
+    //PWM_limit();                                    //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
         
     if (counter1 == 5)                                  //chamado a cada 5ms
     {
-        //correcao_do_PWM(PWMR);                          //controle PID
-        //PWM_limit();                                    //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
+        correcao_do_PWM(PWMR);                          //controle PID
+        PWM_limit();                                    //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
         sprintf(buffer, "Erro %5d\n", erro);            //Converte para string
         UART_enviaString(buffer);                       //Envia para o computador
         UART_enviaCaractere(0x0D);                      //pula linha
@@ -319,17 +320,17 @@ void tomada_de_tempo()
     static unsigned int PWM_Curva = 700;                //PWM ao entrar na curva
     counter1++;
     counter2++;
-    //sensores();                                         //faz a leitura dos sensores e se estiverem com valores fora do limiar, a correção será feita.
+    sensores();                                         //faz a leitura dos sensores e se estiverem com valores fora do limiar, a correção será feita.
 
-    correcao_do_PWM(PWMR);                          //controle PID
-    PWM_limit();                                    //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
+    //correcao_do_PWM(PWMR);                          //controle PID
+    //PWM_limit();                                    //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
     
-    /*if (counter1 == 5)                                  //chamado a cada 5ms
+    if (counter1 == 5)                                  //chamado a cada 5ms
     {
         correcao_do_PWM(PWMR);                          //controle PID
         PWM_limit();                                    //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
         counter1 = 0;
-    }*/
+    }
 
     if (counter2 == 50)                                 //chamado a cada 50ms
     {
@@ -603,11 +604,12 @@ void seta_calibracao() {
     }
 }
 
-int sensores() 
+void sensores() 
 {
-    int soma_direito = 0, soma_esquerdo = 0, denominador_direito = 6, denominador_esquerdo = 6, soma_total = 0;
-    static int peso [] = {-3, -2, -1, 1, 2, 3}; //utilizando um prescale de 2000
+    /*int soma_direito = 0, soma_esquerdo = 0, denominador_direito = 6, denominador_esquerdo = 6, soma_total = 0;
+    static int peso [] = {-3, -2, -1, 1, 2, 3}; //utilizando um prescale de 2000*/
     int sensores_frontais[6] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)};
+    ptr = sensores_frotais;
     //======Estabelece o limiar da leitura dos sensores====//
     //função de correção da calibração
     for (int i = 0; i < 6; i++) 
@@ -623,14 +625,14 @@ int sensores()
     }
     
         
-    for (int j = 0; j < 3; j++)
+    /*for (int j = 0; j < 3; j++)
     {
         soma_esquerdo += (sensores_frontais[j] * peso[j]);
         soma_direito += (sensores_frontais[5 - j] * peso[5 - j]);
     }
 
     soma_total = (soma_esquerdo + soma_direito) / (denominador_esquerdo + denominador_direito);
-    return soma_total;
+    return soma_total;*/
 }
 
 void area_de_parada(int PWM_Curva)
@@ -718,20 +720,21 @@ void PWM_limit() {
 
 void correcao_do_PWM(int PWMR)
 {
-    int soma_total = 0;
+    int soma_direito = 0, soma_esquerdo = 0, denominador_direito = 6, denominador_esquerdo = 6, soma_total = 0;
+    static int peso [] = {-3, -2, -1, 1, 2, 3}; //utilizando um prescale de 2000
     int u = 0, u_encD = 0, u_encE = 0; //valor de retorno do PID
     //sensores_frontais[6] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)}
     
     
-    /*for (int j = 0; j < 3; j++)
+    for (int j = 0; j < 3; j++)
     {
-        soma_esquerdo += (sensores_frontais[j] * peso[j]);
-        soma_direito += (sensores_frontais[5 - j] * peso[5 - j]);
+        soma_esquerdo += (*(ptr+j) * peso[j]);
+        soma_direito += (*(ptr(5-j)) * peso[5 - j]);
     }
 
-    soma_total = (soma_esquerdo + soma_direito) / (denominador_esquerdo + denominador_direito);*/
+    soma_total = (soma_esquerdo + soma_direito) / (denominador_esquerdo + denominador_direito);
     
-    soma_total = sensores();
+    //soma_total = sensores();
     
     erro = 0 - soma_total; //valor esperado(estar sempre em cima da linha) - valor medido
 
