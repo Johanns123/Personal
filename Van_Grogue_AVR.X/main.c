@@ -99,19 +99,13 @@ ISR(TIMER0_OVF_vect) {
     counter1++; //incrementa a cada 1ms
     counter2++; //increenta a cada 1ms
     sensores(); //faz a leitura dos sensores e se estiverem com valores fora do limiar, a correção será feita.
-    if(counter1 == 5) //tempo de 5ms
-    {
-        correcao_do_PWM(); //controle PID
-        PWM_limit();       //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
-        counter1 = 0;
-    }
-    
-    if(counter2 == 20)    //chama a cada 20ms
-    {
-        area_de_parada(); //Verfica se é uma parada ou um cruzamento
-        sentido_de_giro(); //Verifica qual o sentido da curva
-        counter2 = 0;
-    }
+    correcao_do_PWM(); //controle PID
+    PWM_limit();       //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
+    //counter1 = 0;
+    area_de_parada(); //Verfica se é uma parada ou um cruzamento
+    sentido_de_giro(); //Verifica qual o sentido da curva
+    //counter2 = 0;
+    //}
 }//end TIMER_0
 
 /*============================================================================*/
@@ -225,7 +219,8 @@ void parada(int value_erro) {
     if ((!tst_bit(leitura_curva, sensor_de_curva)) && tst_bit(leitura_parada, sensor_de_parada)) {
         contador++;
         entrou_na_curva(value_erro); // Verifica se é uma curva
-    } else if ((!tst_bit(leitura_curva, sensor_de_curva)) && (!tst_bit(leitura_parada, sensor_de_parada))) //verifica se é crizamento
+    } 
+    else if ((!tst_bit(leitura_curva, sensor_de_curva)) && (!tst_bit(leitura_parada, sensor_de_parada))) //verifica se é crizamento
     {
         frente();
         setDuty_1(PWMA);
@@ -276,7 +271,7 @@ void seta_calibracao() {
 void sensores() {
 
     int sensores_frontais[6] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)};
-    ptr = sensores_frontais;
+    ptr = sensores_frontais;        //aponta para o primeiro endereço do vetor
     //======Estabelece o limiar da leitura dos sensores====//
     //função de correção da calibração
     for (int i = 0; i < 6; i++) {
@@ -326,34 +321,35 @@ void area_de_parada() {
     }
 }
 
-    void sentido_de_giro() {
-        //-----> Área do senstido de giro
+void sentido_de_giro() {
+    //-----> Área do senstido de giro
+    int u_curva = 0;
+    static unsigned int PWMA_C = 0, PWMB_C = 0; //PWM de curva com ajuste do PID;
+    static unsigned int PWM_Curva = 350; //PWM ao entrar na curva
 
-
-        if (erro < 0) //virar para a esquerda
-        {
-            entrou_na_curva(erro);
-            set_bit(PORTB, led); //liga o LED
-            /*while (erro < 0) {
-                frente();
-                setDuty_1(PWMA_C);
-                setDuty_2(PWMB_C);
-            }*/
-
-        } 
-        else if (erro > 0) { //cirar para a direita
-            entrou_na_curva(erro);
-            set_bit(PORTB, led); //liga o LED
-            /*while (erro > 0) {
-                frente();
-                setDuty_1(PWMA_C);
-                setDuty_2(PWMB_C);
-            }*/
-        }
-
-        //A função que fazia o robô rodar em seu próprio eixo foi removida
-
+    if ((ptr[0] < 200 && ptr[5] > 900) || (ptr[0]  > 900 && ptr[5] < 200))    
+        //se o primeiro sensor ou o último sensor estiverem lendo branco...
+        //necessário teste com monitor serial
+        //estudar a melhor quantidade de sensores e seu espaçamento
+    {
+        u_curva = PID(erro);
+        PWMA_C = PWM_Curva - u_curva;
+        PWMB_C = PWM_Curva + u_curva;
+        frente();
+        setDuty_1(PWMA_C);
+        setDuty_2(PWMB_C);
+    } //em cima da linha
+        
+    else
+    { //cirar para a direita
+        frente();
+        setDuty_1(PWMA_C);
+        setDuty_2(PWMB_C);
     }
+
+    //A função que fazia o robô rodar em seu próprio eixo foi removida
+
+}
 
 void PWM_limit() {
     //------> Limitando PWM
@@ -382,9 +378,9 @@ void correcao_do_PWM() {
 
     erro = 0 - soma_total;   //valor esperado(estar sempre em cima da linha) - valor medido
 
-    /*sprintf(buffer, "%5d\n", erro); //Converte para string
+    /*sprintf(buffer, "Erro = %5d\n", erro); //Converte para string
     UART_enviaString(buffer); //Envia para o computador
-    UART_enviaCaractere(0x0D); //pula linha*/
+    UART_enviaCaractere(0x0D); //pula linha*/   /*usada somente para mapear*/
 
     //--------------->AREA DO PID<---------------
 
@@ -396,4 +392,5 @@ void correcao_do_PWM() {
     frente();
     setDuty_1(PWMA);
     setDuty_2(PWMB);
+    
 }//fim do programa
