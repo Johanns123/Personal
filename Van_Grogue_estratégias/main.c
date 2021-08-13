@@ -446,7 +446,7 @@ int calculo_do_raio()                                   //esta função calcula o 
     unsigned int diametro = 126;                        //126mm, diâmetro sas rodas
     static unsigned int modulo = 0;
 
-    if (!(curva1) && !(curva2));                        //não calcula o raio se nã mediu a curva
+    if (!(curva1) && !(curva2));                        //não calcula o raio se não mediu a curva
 
     else if (curva1 != curva2) {
         modulo = (diametro / 2) * ((curva1 + curva2) / (curva1 - curva2));      //Cálculo do raio em módulo
@@ -460,7 +460,7 @@ int calculo_do_raio()                                   //esta função calcula o 
 }
 
 //=========Funções visíveis ao usuário===========//
-
+//reavaliar esta função devido à pista possuir um "S" e somente três marcadores de curva
 void entrou_na_curva(int valor_erro, int PWM_Curva) 
 {
     static unsigned int dist_reta1 = 0, dist_curva1 = 0, dist_reta2 = 0, dist_curva2 = 0;   //variáveis para cálculo do raio
@@ -609,7 +609,7 @@ void sensores()
     /*int soma_direito = 0, soma_esquerdo = 0, denominador_direito = 6, denominador_esquerdo = 6, soma_total = 0;
     static int peso [] = {-3, -2, -1, 1, 2, 3}; //utilizando um prescale de 2000*/
     int sensores_frontais[6] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)};
-    ptr = sensores_frotais;
+    ptr = sensores_frontais;
     //======Estabelece o limiar da leitura dos sensores====//
     //função de correção da calibração
     for (int i = 0; i < 6; i++) 
