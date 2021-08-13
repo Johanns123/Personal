@@ -7,16 +7,16 @@
  */
 
 /*Bibliotecas e frequência do uc*/
-#define F_CPU 16000000      //define a frequencia do uC para 16MHz
-#include <avr/io.h>         //Biblioteca geral dos AVR
-#include <avr/interrupt.h>  //Biblioteca de interrupção
-#include <stdio.h>          //Bilioteca do C
-#include <util/delay.h>     //Biblioteca geradora de atraso
-#include "UART.h"           //Biblioteca da comunicação UART
-#include "ADC.h"            //Biblioteca do conversor AD
-#include "PWM_10_bits.h"    //Biblioteca de PWM fast mode de 10 bits
-#include "Driver_motor.h"   //Biblioteca das funções de controle dos motores
-#include "PID.h"            //Biblioteca do controle PID
+#define F_CPU 16000000        //define a frequencia do uC para 16MHz
+#include <avr/io.h>           //Biblioteca geral dos AVR
+#include <avr/interrupt.h>    //Biblioteca de interrupção
+#include <stdio.h>            //Bilioteca do C
+#include <util/delay.h>       //Biblioteca geradora de atraso
+#include "UART.h"             //Biblioteca da comunicação UART
+#include "ADC.h"              //Biblioteca do conversor AD
+#include "PWM_10_bits.h"      //Biblioteca de PWM fast mode de 10 bits
+#include "Driver_motor.h"     //Biblioteca das funções de controle dos motores
+#include "PID.h"              //Biblioteca do controle PID
 //#include "configbits.txt"   //configura os fusíveis
 /*============================================================*/
 
@@ -105,7 +105,6 @@ ISR(TIMER0_OVF_vect) {
     area_de_parada(); //Verfica se é uma parada ou um cruzamento
     sentido_de_giro(); //Verifica qual o sentido da curva
     //counter2 = 0;
-    //}
 }//end TIMER_0
 
 ISR(ADC_vect)
@@ -221,7 +220,7 @@ void loop()//loop vazio
 
 void parada(int value_erro) {
 
-    static char contador = 0, numParada = 4; // Borda   //contador - número de marcadores de curva;
+    static char contador = 0, numcurva = 10; // Borda   //contador - número de marcadores de curva;
     static char parada = 0;
 
     if ((!tst_bit(leitura_curva, sensor_de_curva)) && tst_bit(leitura_parada, sensor_de_parada)) {
@@ -238,7 +237,7 @@ void parada(int value_erro) {
     else if ((tst_bit(leitura_curva, sensor_de_curva)) && (!tst_bit(leitura_parada, sensor_de_parada)))  parada++;
 
     //leu o número total de marcações e leu as duas marcações de largada e chegada
-    while (contador == numParada && parada == 2)
+    while (contador == numcurva && parada == 2)
     {
         freio();
     }
@@ -308,7 +307,7 @@ void area_de_parada() {
     delta_T = tempo_atual - timer2;
     switch (ejetor) {
         case 0:
-            if ((tst_bit(leitura_curva, sensor_de_curva)) || (tst_bit(leitura_parada, sensor_de_parada)))//verifica se sos sensores estão em nível 0
+            if ((tst_bit(leitura_curva, sensor_de_curva)) || (tst_bit(leitura_parada, sensor_de_parada)))
             {
                 timer2 = tempo_atual;
                 ejetor = 1;
@@ -353,10 +352,10 @@ void sentido_de_giro() {
     } //em cima da linha
         
     else
-    { //cirar para a direita
+    { //pra frente - reta
         frente();
-        setDuty_1(PWMA_C);
-        setDuty_2(PWMB_C);
+        setDuty_1(PWMA);
+        setDuty_2(PWMB);
     }
 
     //A função que fazia o robô rodar em seu próprio eixo foi removida
@@ -368,7 +367,8 @@ void PWM_limit() {
 
     if (PWMA > 1023) {
         PWMA = 1000;
-    } else if (PWMB > 1023) {
+    } 
+    else if (PWMB > 1023) {
         PWMB = 1000;
     }
 }
