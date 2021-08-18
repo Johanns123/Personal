@@ -61,7 +61,7 @@ def calculo_modelo_sem_perdas(Pt_dBm, Gt_dBi, Gr_dBi, f, d, L, n):
     return Pr_dBm
 
 
-'''def log_dist():
+def log_dist():
 
     Pt_dBm = 52
     Gt_dBi = 25
@@ -86,10 +86,16 @@ def calculo_modelo_sem_perdas(Pt_dBm, Gt_dBi, Gr_dBi, f, d, L, n):
     plt.plot(np.log10(d1), Pr_friis, 'b')
 
     for i in range(50):
-        Pr_shadow = logNormalShadowing(
-            Pt_dBm, Gt_dBi, Gr_dBi, f, d0, d, L, sigma, n
+        lambda1 = 3 * (10 ** 8) / f
+        K = (
+            20 * np.log10(lambda1 / (4 * np.pi))
+            - 10 * n * np.log10(d0)
+            - 10 * np.log10(L)
         )
-        plt.plot(np.log10(d), Pr_shadow, 'r*')
+        PL = Gt_dBi + Gr_dBi + K - 10 * n * np.log10(d / d0)
+        Pr_dBm = Pt_dBm + PL
+
+        plt.plot(np.log10(d), Pr_dBm, 'r*')
 
     plt.xlabel('log10(d)')
     plt.ylabel('P_r (dBm)')
@@ -98,7 +104,7 @@ def calculo_modelo_sem_perdas(Pt_dBm, Gt_dBi, Gr_dBi, f, d, L, n):
     plt.grid(True)
 
     plt.show()
-'''
+
 
 def logNormalShadowing(Pt_dBm, Gt_dBi, Gr_dBi, f, d0, d, L, sigma, n):
 
@@ -164,7 +170,7 @@ def modelo_close_in_reference():
     Gref = 1;
     ht = 50;
     hr = 2;
-    d = np.array([np.arange(1,10**5, 0.1)]);
+    d = np.arange(1,10**5, 0.1);
     L = 1;
 
 
@@ -184,20 +190,23 @@ def modelo_close_in_reference():
 
 
     dc = 4*ht*hr/lambda1;
-    d1 = np.array([np.arange(1,ht, 0.1)]);
-    d2 = np.array([np.arange(ht,dc, 0.1)]);
-    d = np.array([np.arange(dc,10**5, 0.1)]);
+    d1 = np.arange(1,ht, 0.1);
+    d2 = np.arange(ht,dc, 0.1);
+    d3 =  np.arange(dc,10**5, 0.1);
 
-    K_fps = Glos*Gref*lambda1**2/((4*pi)**2*L);
+    K_fps = Glos*Gref*lambda1**2/((4*np.pi)**2*L);
     K_2ray = Glos*Gref*ht**2*hr**2/L;
 
     Pr1 = Pt*K_fps/(d1**2+ht**2);
     Pr2 = Pt*K_fps/d2**2;
     Pr3 = Pt*K_2ray/d3**4;
 
-    plt.semilogx(d1,10*log10(Pr1), 'k-.');
-    pltsemilogx(d2,10*log10(Pr2), 'r-.');
-    plt.semilogx(d3,10*log10(Pr3), 'g-.');
+    plt.semilogx(d1,10*np.log10(Pr1), 'k-.');
+    plt.semilogx(d2,10*np.log10(Pr2), 'r-.');
+    plt.semilogx(d3,10*np.log10(Pr3), 'g-.');
+
+    plt.grid()
+    plt.show()
 
     #h = line([ht ht], [-160 -55]); set(h, 'Color', 'm');
     #h = line([dc dc], [-160 -55]); set(h, 'Color', 'm');
