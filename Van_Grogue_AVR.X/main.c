@@ -382,8 +382,8 @@ void correcao_do_PWM() {
     static int peso [] = {-3, -2, -1, 1, 2, 3}; //utilizando um prescale de 2000
 
     for (int j = 0; j < 3; j++) {
-        soma_esquerdo += (*(ptr+j) * peso[j]);
-        soma_direito += (*(ptr(5-j)) * peso[5 - j]);
+         soma_esquerdo += (*(ptr+j) * peso[j]);
+        soma_direito += (*(ptr+(5-j)) * peso[5 - j]);
     }
 
     soma_total = (soma_esquerdo + soma_direito) / (denominador_esquerdo + denominador_direito);
