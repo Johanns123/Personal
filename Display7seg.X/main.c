@@ -28,6 +28,11 @@
 #define tst_bit(y,bit) (y&(1<<bit)) //retorna 0 ou 1 conforme leitura do bit
 //==============================================================
 
+/*Estrutura*/
+static struct perif
+{
+    int flag1, flag2, valor;
+}periferal;
 
 //Variáveis globais
 //================
@@ -36,41 +41,31 @@ int valor = 0;
 //================
 
 ISR(PCINT0_vect) {
-    static int flag1 = 0, flag2 = 0, flag3 = 0;
+    periferal.flag1 = 0, periferal.flag2 = 0;
 
     if (!tst_bit(PINB, botao1)) //botão1 pressionado?
     {
-        flag1 = 1;
+        periferal.flag1 = 1;
     }
 
     if (!tst_bit(PINB, botao2)) //botão2 pressionado?
     {
-        flag2 = 1;
+        periferal.flag2 = 1;
 
     }
 
-    if (tst_bit(PINB, botao1) && flag1)
+    if (tst_bit(PINB, botao1) && periferal.flag1)
     {
-        flag1 = 0;
-        valor = 1;
+        periferal.flag1 = 0;
+        periferal.valor = 1;
     }
 
-    if (tst_bit(PINB, botao2) && flag2)
+    if (tst_bit(PINB, botao2) && periferal.flag2)
     {
-        flag2 = 0;
-        valor = 2;
+        periferal.flag2 = 0;
+        periferal.valor = 2;
     }
     
-    if (!tst_bit(PINB, botao3))     //botao3 pressionado?
-    {
-        flag3 = 1;
-    }
-
-    if (tst_bit(PINB, botao2) && flag3)
-    {
-        flag3 = 0;
-        valor = 0;
-    }
 
 }
 
@@ -81,7 +76,7 @@ void main() {
     PORTB = 0x00; //resistores de pull-up internos desabilitados
 
     PCICR = 0x01; //Habilita interrupção do PCINT0
-    PCMSK0 = 0x07; //Habilita PCINT0 e PCINT1 e PCINT2
+    PCMSK0 = 0x03; //Habilita PCINT0 e PCINT1 e PCINT2
 
     sei();
 
@@ -172,7 +167,7 @@ void main() {
             _delay_ms(500);
         }
 
-        valor = 0;
+        periferal.valor = 0;
 
     }
 }
