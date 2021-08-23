@@ -12,8 +12,8 @@
 
 void UART_config() 
 {
-	//Baud Rate de 9600bps para um cristal de 16MHz (Datasheet)
-    UBRR0 = 103;    
+	//Baud Rate de 14.4kbps para um cristal de 16MHz (Datasheet)
+    UBRR0 = 68;    
    
     //Habilita a interrupção de recepção e os pinos TX e RX
     UCSR0B =  (1<<RXEN0) | (1<<TXEN0) | (1<<RXCIE0) ;
