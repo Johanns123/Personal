@@ -393,18 +393,17 @@ int sorteio_de_nomes(int j, int num)
 
 }
 
-
+/*Fazer a leitura do arquivo e verificar as strings procurando uma forma de mapear o arquivo em uma matriz*/
 void escreve_nomes(int num, char opt)
 {
-    static int linha = 0;     //54caracteres cada linha
+    /*static int linha = 1;     //54caracteres cada linha
     static int caracter = 0;
 
     caracter = linha * 54;
-
     static char *nomes_atual[11] = {"0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"};     //guarda os nomes designados
     static char *nomes_anterior[11] = {"0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"};     //guarda os nomes designados
-    //static char *nomes_proximo[11] = {"0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"};     //guarda os nomes designados
-
+    static char *nomes_proximo[11] = {"0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"};     //guarda os nomes designados
+*/
     for(int j = 0; j < 4; j++)
     {
 
@@ -414,7 +413,7 @@ void escreve_nomes(int num, char opt)
         numero_aleatorio = sorteio_de_nomes(j, num);
 
 
-        /*switch(numero_aleatorio)
+        switch(numero_aleatorio)
         {
             case 0:
             if(counter > selecao) numero_aleatorio = sorteio_de_nomes(j, num);
@@ -466,32 +465,33 @@ void escreve_nomes(int num, char opt)
             counter9++;
             break;
 
-        }*/
+        }
 
         //melhorar essa parte do algoritmo para ler o vetor atual e o anterior
-        if(opt%2)   //leituras pares
+        /*if(opt%2)   //leituras pares
             nomes_atual [j] = nomes[numero_aleatorio];
 
         else    //leituras ímpares
             nomes_anterior [j] = nomes[numero_aleatorio];
 
-        //Assim que ler todos os vetores tanto de sábado quanto de quarta, compará-los
-        if(correcao && j == 3)
+        if(linha%2)
         {
 
-            /*for(int i = 0; i < 4; i++)
-            {
-                //printf("%s", nomes_anterior[i]);
-            }
-            //puts("\n");*/
+            nomes_proximo[j] = nomes_anterior[j];
+        }*/
+
+
+        //Assim que ler todos os vetores tanto de sábado quanto de quarta, compará-los
+        /*if(correcao && j == 3)
+        {
+
 
             for(int i = 0; i < 4; i++)
             {
                 //printf("%s", nomes_atual[i]);
                 if(!strcmp(nomes_atual[i], nomes_anterior[i]))
                 {
-                    caracter += 10;
-
+                    //caracter += 10;
                     if(!strcmp(nomes_atual[0], nomes_anterior[0]))
                     {
                         fseek(file, caracter,SEEK_SET);
@@ -537,11 +537,47 @@ void escreve_nomes(int num, char opt)
             fseek(file,0,SEEK_END);
             correcao = 0;
             //puts("\n");
-        }
+        }*/
+
+        /*if(!(linha%2) && j == 3)
+        {
+          for(int i = 0; i < 4; i++)
+          {
+              //printf("%s", nomes_atual[i]);
+              if(!strcmp(nomes_anterior[i], nomes_proximo[i]))
+              {
+                  caracter += 16;
+                  printf("encontrou->%d\n", caracter);
+                  if(!strcmp(nomes_proximo[0], nomes_anterior[0]))
+                  {
+                      fseek(file, caracter,SEEK_SET);
+                      numero_aleatorio = sorteio_de_nomes(i, num);
+                      fprintf(file, "%10s,", nomes[numero_aleatorio]);
+                      nomes_anterior[0] = nomes[numero_aleatorio];
+                  }
+
+                  else
+                  {
+
+                    fseek(file, caracter + (strlen(nomes_anterior[i]) * (i+1)),SEEK_SET); //posicionamento do cursor onde está o nome repetido
+                    numero_aleatorio = sorteio_de_nomes(i, num);
+                    fprintf(file, "%10s,", nomes[numero_aleatorio]);
+                    nomes_anterior[i] = nomes[numero_aleatorio];
+
+
+                  }
+
+              }
+
+          }
+          fseek(file,0,SEEK_END);
+          correcao = 0;
+          //puts("\n");
+      }*/
 
         fprintf(file, "%10s,", nomes[numero_aleatorio]);
 
     }
 
-    linha++;
+    /*linha++;*/
 }
