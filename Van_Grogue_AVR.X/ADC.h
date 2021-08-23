@@ -1,29 +1,39 @@
 /*---------------------------------------------------------------
  * BIBLIOTECA PARA UTILIZACAO DO CONVERSOR AD DO AVR
- * Modificada por: PROF. RODRIGO RECH
- * 08/2019
+ * Modificada por: PROF. André Costa Canella
+ * 08/2021
  * -----------------------------------------------------------------*/
 
-void inicializa_ADC(void){
+void ADC_init (void) {
+     //Fosc = 16MHz -> Tosc = 62,5ns
+    //Fadc_max = 200kHz -> Tadc_min = 5us
+    // Tadc_min / Tosc = 80 -> CK/128 - TADC_resultante = 8us
+    //Primeira conversão = 25 ciclos de AD = 25 * 8us
+    //Demais conversões = 13 ciclos de AD = 13 *8us
+    //Tempo total para todas as conversões = (25*8) + (13*8*6) = 720us
+    //720us sem contar os ciclos de máquina para executar as funções e o switch
+    //Logo, atentar à temporização de 1ms
     
-    //Habilita a referência de tensão interna do ADC e ativa o canal 0 (VCC)
-    ADMUX = (1<<REFS0);                   
-    
-    //Habilita o ADC e configura o prescaler para 128
-    ADCSRA = (1<<ADEN) | (1<<ADPS2) | (1<<ADPS1) | (1<<ADPS0);
+    ADMUX = 0x40; //0100-0000
+    ADCSRA = 0x8f; //1000-1111
+    ADCSRB = 0x00; // 0000-0000
+    DIDR0 = 0x3f;// 0011-1111
+     
 }
 
-unsigned int le_ADC(unsigned char canal){
+void ADC_conv_ch (unsigned char canal) {
     
-    canal = canal & 0b00001111;
-    ADMUX = (ADMUX & 0xF0) | canal; 
-
-    //Inicia a conversão
-    ADCSRA |= (1 << ADSC);
-
-    //Aguarda a finalização da conversão
-    while ( (ADCSRA & (1<<ADSC)));
+    ADMUX &= 0xf0;
+    ADMUX |= (canal & 0x0f);
     
-    //Retorna o valor convertido
-    return ( ADC ); 
+    ADCSRA |= 0x40;
+            
+}
+
+int ADC_ler ( void ) {
+    
+    int dado = ADCL;
+    dado |= ADCH << 8;
+    
+    return dado;
 }
