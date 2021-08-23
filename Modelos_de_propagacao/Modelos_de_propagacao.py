@@ -176,7 +176,7 @@ def modelo_close_in_reference():
 
     d_los = np.sqrt((ht - hr)**2+d**2);
     d_ref = np.sqrt((ht + hr)**2+d**2);
-    lambda1 = 3+10**8/f;
+    lambda1 = 3*10**8/f;
     phi = 2*np.pi*(d_ref-d_los)/lambda1;
     s = lambda1/(4*np.pi)*(np.sqrt(Glos)/d_los + R*np.sqrt(Gref)/d_ref*np.exp(1j*phi));
     Pr = Pt*np.abs(s)**2;
@@ -204,6 +204,9 @@ def modelo_close_in_reference():
     plt.semilogx(d1,10*np.log10(Pr1), 'k-.');
     plt.semilogx(d2,10*np.log10(Pr2), 'r-.');
     plt.semilogx(d3,10*np.log10(Pr3), 'g-.');
+
+    plt.axvline(x=ht, color='m')
+    plt.axvline(x=dc, color='m')
 
     plt.grid()
     plt.show()
