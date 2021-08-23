@@ -40,12 +40,14 @@
 /*Variáveis globais*/
 int erro = 0; //Área PID
 int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
-int *ptr = NULL;                                        //ponteiro utilizado para receber os valores dos sensores frontais
+//int *ptr = NULL;                                        //ponteiro utilizado para receber os valores dos sensores frontais
+int sensores_frontais[6];
 
 //Variáveis globais da calibração de sensores
-unsigned int valor_max [] = {1023, 1023, 1023, 1023, 1023, 1023}; //variáveis usadas na calibração do sensores
-unsigned int valor_min [] = {0, 0, 0, 0, 0, 0};
-unsigned int valor_min_abs = 0, valor_max_abs = 1023;
+unsigned int valor_max[6] = {0, 0, 0, 0, 0, 0};
+unsigned int valor_min[6] = {1023, 1023, 1023, 1023, 1023, 1023};
+unsigned int valor_max_abs = 0;
+unsigned int valor_min_abs = 1023;
 
 //Variáveis globais do timer0
 unsigned int millis = 0;
@@ -69,6 +71,8 @@ volatile char flag_com = 0; //flag que indica se houve recepção de dado
 /*===========================================================================*/
 
 /*Protótipo das funções*/
+void ADC_maq();
+void INT_INIT();
 void entrou_na_curva(int valor_erro);
 void parada(int value_erro);
 void calibra_sensores();
@@ -97,19 +101,21 @@ ISR(TIMER0_OVF_vect) {
     TCNT0 = 240; //Recarrega o Timer 0 para que a contagem seja 1ms novamente
     millis++; //Incrementa a variável millis a cada 1ms
     counter1++; //incrementa a cada 1ms
-    counter2++; //increenta a cada 1ms
-    sensores(); //faz a leitura dos sensores e se estiverem com valores fora do limiar, a correção será feita.
-    correcao_do_PWM(); //controle PID
-    PWM_limit();       //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
-    //counter1 = 0;
-    area_de_parada(); //Verfica se é uma parada ou um cruzamento
-    sentido_de_giro(); //Verifica qual o sentido da curva
+    //counter2++; //increenta a cada 1ms
+    if(counter1 == 2)   //tempo suficiente para a leitura dos sensores frontais
+    {   sensores(); //faz a leitura dos sensores e se estiverem com valores fora do limiar, a correção será feita.
+        correcao_do_PWM(); //controle PID
+        PWM_limit();       //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
+        area_de_parada(); //Verfica se é uma parada ou um cruzamento
+        sentido_de_giro(); //Verifica qual o sentido da curva
+        counter1 = 0;
+    }
     //counter2 = 0;
 }//end TIMER_0
 
 ISR(ADC_vect)
 {
-    
+    ADC_maq();
 }
 
 /*============================================================================*/
@@ -120,6 +126,7 @@ int main(void) {
     setup();
 
     while (1) loop();
+    return 0;
 }//end main
 
 //===Funções não visíveis ao usuário======//
@@ -127,8 +134,10 @@ int main(void) {
 void setup() {
 
     setup_Hardware();
-    setup_logica();
+    ADC_init();
     sei(); //Habilita as interrupções
+    setup_logica();
+    INT_INIT();    //inicializo interrupção do TIMER0 após a calibração
 
 }
 
@@ -143,14 +152,6 @@ void setup_Hardware(){
 
     //esquerdo pino 4 - PD2
     UART_config(); //Inicializa a comunicação UART
-    inicializa_ADC(); //Configura o ADC
-    UART_enviaString(s); //Envia um texto para o computador
-    
-    TCCR0B = 0b00000101; //TC0 com prescaler de 1024
-    TCNT0 = 240; //Inicia a contagem em 100 para, no final, gerar 1ms
-    TIMSK0 = 0b00000001; //habilita a interrupção do TC0
-    
-    ADCSRA |= (1<<ADIE);           //Habilita a interrupção do AD
     
     TCCR1A = 0xA2; //Configura operação em fast PWM, utilizando registradores OCR1x para comparação
 
@@ -161,7 +162,12 @@ void setup_Hardware(){
 void setup_logica(){
     //----> Calibração dos Sensores frontais <----//
     set_bit(PORTB, led); //subrotina de acender e apagar o LED 13
-    calibra_sensores(); //calibração dos sensores
+    ADC_maq();
+    calibra_sensores(); //calibração dos sensores //A calibração vai conseguir acompanhar o AD
+                                                  //ou pode ser que o vetor não seja preenchido a tempo?
+                                                  //É necessário colocar um contador
+                                                  //para depois chamar a função de calibração?
+    
     seta_calibracao(); //estabelece o limiar dos sensores através dos valores da função de cima
     sensores(); //determina o limiar dos sensores e printa seus valores na tela
     
@@ -179,10 +185,68 @@ void setup_logica(){
     
 }
 
+void INT_INIT()
+{
+        
+    TCCR0B = 0b00000101; //TC0 com prescaler de 1024
+    TCNT0 = 240; //Inicia a contagem em 100 para, no final, gerar 1ms
+    TIMSK0 = 0b00000001; //habilita a interrupção do TC0
+}
 
 void loop()//loop vazio
 {
 
+}
+
+void ADC_maq () {
+    
+    static unsigned char estado = 10;
+    
+    switch (estado) {
+        
+        case 0:
+            estado = 1;
+            sensores_frontais[0] = ADC_ler();
+            ADC_conv_ch(2);
+            break;
+            
+        case 1:
+            estado = 2;
+            sensores_frontais[1] = ADC_ler();
+            ADC_conv_ch(1);
+            break;
+            
+        case 2:
+            estado = 3;
+            sensores_frontais[2] = ADC_ler();
+            ADC_conv_ch(0);
+            break;
+            
+        case 3:
+            estado = 4;
+            sensores_frontais[3] = ADC_ler();
+            ADC_conv_ch(7);
+            break;
+            
+        case 4:
+            estado = 5;
+            sensores_frontais[4] = ADC_ler();
+            ADC_conv_ch(6);
+            break;
+            
+        case 5:
+            estado = 6;
+            sensores_frontais[5] = ADC_ler();
+            ADC_conv_ch(3);
+            break;
+            
+        default:
+            estado = 0;
+            ADC_conv_ch(3);
+            sensores_frontais[0] = ADC_ler();
+            break; 
+    }
+    
 }
 
 //=========Funções visíveis ao usuário===========//
@@ -246,13 +310,12 @@ void parada(int value_erro) {
 void calibra_sensores() {
     //=====Função que inicializa a calibração====//
     for (int i = 0; i < 120; i++) {
-        int sensores_frontais[] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)};
         for (int i = 0; i < 6; i++) {
-            if (valor_min [i] < sensores_frontais [i]) {
+            if (sensores_frontais[i] < valor_min [i]) {
                 valor_min[i] = sensores_frontais[i];
             }
-            else if (valor_max [i] > sensores_frontais[i]) {
-                valor_max[i] = sensores_frontais [i];
+            if (sensores_frontais[i] > valor_max [i]) {
+                valor_max[i] = sensores_frontais[i];
             }
         }
 
@@ -271,26 +334,27 @@ void seta_calibracao() {
 
     //função que seta o limiar dos sensores
     for (int i = 0; i < 6; i++) {
-        if (valor_min_abs < valor_min [i]) {
+        if (valor_min [i] < valor_min_abs && valor_min[i] !=0 ) {
             valor_min_abs = valor_min [i];
-        } else if (valor_max_abs > valor_max [i]) {
+        } 
+        
+        if (valor_max [i] > valor_max_abs) {
             valor_max_abs = valor_max [i];
         }
+
     }
 }
 
 void sensores() {
 
-    int sensores_frontais[6] = {le_ADC(3), le_ADC(2), le_ADC(1), le_ADC(0), le_ADC(7), le_ADC(6)};
-    ptr = sensores_frontais;        //aponta para o primeiro endereço do vetor
     //======Estabelece o limiar da leitura dos sensores====//
     //função de correção da calibração
     for (int i = 0; i < 6; i++) {
-        if (valor_min_abs < sensores_frontais[i]) {
+        if (sensores_frontais[i] < valor_min_abs) {
             sensores_frontais[i] = valor_min_abs;
         }
-        else if (valor_max_abs > sensores_frontais[i]) {
-            sensores_frontais [i] = valor_max_abs;
+        if (sensores_frontais[i] > valor_max_abs) {
+            sensores_frontais[i] = valor_max_abs;
         }
 
     }
@@ -338,7 +402,7 @@ void sentido_de_giro() {
     static unsigned int PWMA_C = 0, PWMB_C = 0; //PWM de curva com ajuste do PID;
     static unsigned int PWM_Curva = 350; //PWM ao entrar na curva
 
-    if ((ptr[0] < 200 && ptr[5] > 900) || (ptr[0]  > 900 && ptr[5] < 200))    
+    if ((sensores_frontais[0] < 200 && sensores_frontais[5] > 900) || (sensores_frontais[0]  > 900 && sensores_frontais[5] < 200))    
         //se o primeiro sensor ou o último sensor estiverem lendo branco...
         //necessário teste com monitor serial
         //estudar a melhor quantidade de sensores e seu espaçamento
@@ -382,8 +446,8 @@ void correcao_do_PWM() {
     static int peso [] = {-3, -2, -1, 1, 2, 3}; //utilizando um prescale de 2000
 
     for (int j = 0; j < 3; j++) {
-         soma_esquerdo += (*(ptr+j) * peso[j]);
-        soma_direito += (*(ptr+(5-j)) * peso[5 - j]);
+         soma_esquerdo += (sensores_frontais[j] * peso[j]);
+        soma_direito += (sensores_frontais[5-j] * peso[5 - j]);
     }
 
     soma_total = (soma_esquerdo + soma_direito) / (denominador_esquerdo + denominador_direito);
