@@ -29,35 +29,37 @@
 //==============================================================
 
 /*Estrutura*/
-static struct perif
+struct perif
 {
     int flag1, flag2, valor;
 }periferal;
 
 //Variáveis globais
 //================
-int valor = 0;
+
 //Protótipo das funções
 //================
 
 ISR(PCINT0_vect) {
-    periferal.flag1 = 0, periferal.flag2 = 0;
 
     if (!tst_bit(PINB, botao1)) //botão1 pressionado?
     {
         periferal.flag1 = 1;
-    }
-
-    if (!tst_bit(PINB, botao2)) //botão2 pressionado?
-    {
-        periferal.flag2 = 1;
-
+        
     }
 
     if (tst_bit(PINB, botao1) && periferal.flag1)
     {
+        cpl_bit(PORTD, PD2);
         periferal.flag1 = 0;
         periferal.valor = 1;
+        
+    }
+    
+    if (!tst_bit(PINB, botao2)) //botão2 pressionado?
+    {
+        periferal.flag2 = 1;
+
     }
 
     if (tst_bit(PINB, botao2) && periferal.flag2)
@@ -73,7 +75,7 @@ void main() {
     DDRD = 0x00; //Todo PORTD como saída
     PORTD = 0x00; //inicia todos do PORTD em LOW
     DDRB &= ~(1 << botao1) &~(1 << botao2) &~(1 << botao3); //PORTB como entrada
-    PORTB = 0x00; //resistores de pull-up internos desabilitados
+    PORTB = 0x03; //resistores de pull-up internos desabilitados
 
     PCICR = 0x01; //Habilita interrupção do PCINT0
     PCMSK0 = 0x03; //Habilita PCINT0 e PCINT1 e PCINT2
@@ -85,7 +87,7 @@ void main() {
             , 0x7F, 0x6F, 0x77, 0x7F, 0x39, 0x3F, 0x79, 0x71};
 
         for (int i = 0; i < 16; i++) {
-            switch (valor) {
+            switch (periferal.valor) {
                 case 0:
                     PORTD = display[i];
                     
