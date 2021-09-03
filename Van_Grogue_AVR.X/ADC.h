@@ -18,7 +18,9 @@ void ADC_init (void) {
     ADCSRA = 0x8c; //1000-1100  //ADC habilitado, interrupção do AD habilitado e prescaler de 16 - 1MHz
     ADCSRB = 0x00; // 0000-0000 //Modo livre
     DIDR0 = 0x3f;// 0011-1111   //Desabilita a entrada digital desses terminais
-     
+ 
+    //Atenção. Segundo o datasheet quanto maior a velocidade,
+    //menor a precisão do AD, logo, utilizar 8bits em freq. elevadas
 }
 
 void ADC_conv_ch (unsigned char canal) {
