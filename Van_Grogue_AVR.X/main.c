@@ -44,17 +44,18 @@ int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
 int sensores_frontais[6];
 
 //Variáveis globais da calibração de sensores
-unsigned int valor_max[6] = {0, 0, 0, 0, 0, 0};
-unsigned int valor_min[6] = {1023, 1023, 1023, 1023, 1023, 1023};
-unsigned int valor_max_abs = 0;
-unsigned int valor_min_abs = 1023;
+unsigned char valor_max[6] = {0, 0, 0, 0, 0, 0};
+unsigned char valor_min[6] = {255, 255, 255, 255, 255, 255};
+unsigned char valor_max_abs = 0;
+unsigned char valor_min_abs = 255;
+//unsigned char valor_max_abs = 255;    //colocar assim quando testar no robô, não fica prático simular desta forma
+//unsigned char valor_min_abs = 0;
 
 //Variáveis globais do timer0
 unsigned int millis = 0;
 unsigned int counter1 = 0, counter2 = 0;
 
 //Variáveis globais da UART
-char s [] = "Início da leitura";
 char buffer[5]; //String que armazena valores de entrada para serem printadas
 volatile char ch; //armazena o caractere lido
 volatile char flag_com = 0; //flag que indica se houve recepção de dado
@@ -94,7 +95,7 @@ ISR(USART_RX_vect) {
     ch = UDR0; //Faz a leitura do buffer da serial
 
     UART_enviaCaractere(ch); //Envia o caractere lido para o computador
-    flag_com = 1; //Aciona o flag de comunicação
+    //flag_com = 1; //Aciona o flag de comunicação
 }
 
 ISR(TIMER0_OVF_vect) {
@@ -143,7 +144,9 @@ void setup() {
 
 
 void setup_Hardware(){
-    DDRD = 0b01111000; //PD3 - PD6 definidos como saída, PD7 como entrada
+    MCUCR &= 0xef;      //habilita pull up quando configurado e desabilita algumas configurações prévias do MCU
+
+    DDRD = 0b01111010; //PD3 - PD6 definidos como saída, PD7 como entrada, PD0 como entrada(RX) e PD1 como saída(TX)
     PORTD = 0b10000000; //inicializados em nível baixo e PD7 com pull up
     DDRB = 0b00100110; //Habilita PB0 como entrada e PB5, PB1 e PB2 como saída
     PORTB = 0b00000001; //PORTB inicializa desligado e pull up no PB0
@@ -151,7 +154,7 @@ void setup_Hardware(){
     PORTC = 0b00001111; //PC3 - PC0 com pull up (colocar resistor de pull up nos pinos A6 e A7)
 
     //esquerdo pino 4 - PD2
-    UART_config(); //Inicializa a comunicação UART
+    UART_config(16); //Inicializa a comunicação UART com 57.6kbps
     
     TCCR1A = 0xA2; //Configura operação em fast PWM, utilizando registradores OCR1x para comparação
 
