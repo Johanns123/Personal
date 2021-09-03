@@ -57,7 +57,7 @@ unsigned int sensores_frontais[6];
 //Variáveis globais da calibração de sensores
 unsigned int valor_max [] = {1023, 1023, 1023, 1023, 1023, 1023}; //variáveis usadas na calibração do sensores
 unsigned int valor_min [] = {0, 0, 0, 0, 0, 0};
-unsigned int valor_min_abs = 0, valor_max_abs = 1023;
+unsigned int valor_min_abs = 1023, valor_max_abs = 0;
 
 unsigned int counter = 0;
 
