@@ -61,7 +61,7 @@ volatile char flag_com = 0; //flag que indica se houve recepção de dado
 /*======================================================*/
 
 /*Variáveis usadas no controle do loop*/
-char flag0 = 0;
+//char flag0 = 1, flag1 = 0;
 
 /*tempo =65536 * Prescaler/Fosc = 65536 * 1024/16000000 = 4, 19s
  tempo = X_bit_timer * Prescaler/Fosc
@@ -72,8 +72,8 @@ char flag0 = 0;
 /*Protótipo das funções*/
 void ADC_maq();
 void INT_INIT();
-void entrou_na_curva(int valor_erro);
-void parada(int value_erro);
+//void entrou_na_curva(char valor_erro);
+void parada();
 void calibra_sensores();
 void seta_calibracao();
 void sensores();
@@ -84,6 +84,7 @@ void loop();
 void sentido_de_giro();
 void PWM_limit();
 void correcao_do_PWM();
+void estrategia();
 /*===========================================================================*/
 
 
@@ -97,18 +98,8 @@ ISR(USART_RX_vect) {
 
 ISR(TIMER0_OVF_vect) {
     TCNT0 = 56; //Recarrega o Timer 0 para que a contagem seja 1ms novamente
-    counter1++; //incrementa a cada 1ms
-    //counter2++; //increenta a cada 1ms
-    if(counter1 == 2)   //tempo suficiente para a leitura dos sensores frontais
-    {   sensores(); //faz a leitura dos sensores e se estiverem com valores fora do limiar, a correção será feita.
-        correcao_do_PWM(); //controle PID
-        PWM_limit();       //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
-        sentido_de_giro(); //Verifica qual o sentido da curva
-        parada(erro); // Verifica se é um marcador de parada
-
-        counter1 = 0;
-    }
-    //counter2 = 0;
+    
+    estrategia();
 }//end TIMER_0
 
 ISR(ADC_vect)
@@ -195,7 +186,25 @@ void INT_INIT()
 
 void loop()//loop vazio
 {
-
+    /*unsigned char u_curva = 0;
+    static unsigned int PWMA_C = 0, PWMB_C = 0; //PWM de curva com ajuste do PID;
+    static unsigned int PWM_Curva = 350; //PWM ao entrar na curva
+    if(flag0)
+    {
+        correcao_do_PWM();
+        flag0 = 0x00;
+    }
+    
+    if(flag1)
+    {
+       u_curva = PID(erro);
+       PWMA_C = PWM_Curva - u_curva;
+       PWMB_C = PWM_Curva + u_curva;
+       frente();
+       setDuty_1(PWMA_C);
+       setDuty_2(PWMB_C);
+       flag1 = 0x00;
+    }*/
 }
 
 void ADC_maq () {
@@ -281,7 +290,7 @@ void ADC_maq () {
     }
 }*/
 
-void parada(int value_erro) 
+void parada() 
 {
 
     static char contador = 0, numcurva = 10; // Borda   //contador - número de marcadores de curva;
@@ -393,10 +402,12 @@ void sentido_de_giro()
         frente();
         setDuty_1(PWMA_C);
         setDuty_2(PWMB_C);
+        //flag1 = 1;
     } //em cima da linha
         
     else
     { //pra frente - reta
+        //flag1 = 0x00;
         frente();
         setDuty_1(PWMA);
         setDuty_2(PWMB);
@@ -455,3 +466,18 @@ void correcao_do_PWM() {
     setDuty_2(PWMB);
     
 }//fim do programa
+
+void estrategia()
+{
+    counter1++; //incrementa a cada 100us
+    parada();   //verifica se é parada a cada 100us
+    if(counter1 == 5)   //em 500us
+    {
+        sensores();         //seta o limiar da leitura dos sensores
+        //flag0 = 1;
+        correcao_do_PWM();  //Corrige o PWM através do PID
+        PWM_limit();        //Verifica se houve estouro no PWM por parte do PID
+        sentido_de_giro();  //Verifica se precisa fazer uma curva
+        counter1 = 0x00;
+    }   
+}
