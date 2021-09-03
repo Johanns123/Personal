@@ -66,7 +66,7 @@ def log_dist():
     Pt_dBm = 52
     Gt_dBi = 25
     Gr_dBi = 15
-    f = 1 * (10 ** 9)
+    f = 3 * (10 ** 10)   ##30GHz
     d0 = 1
 
     d = 100 * np.array(
@@ -128,7 +128,7 @@ def log_normal():
     Pt_dBm = 52
     Gt_dBi = 25
     Gr_dBi = 15
-    f = 1 * (10 ** 9)
+    f = 3 * (10 ** 10)  ##30GHz
     d0 = 1
 
     d = 100 * np.array(
@@ -163,8 +163,8 @@ def log_normal():
 
 
 def modelo_close_in_reference():
-    f = 900*10**6;
-    R = -1;
+    f = 3 * (10 ** 10)  ##30GHz - 300Ghz
+    R = -1;  ##coeficiente de reflexão
     Pt = 1;
     Glos = 1;
     Gref = 1;
