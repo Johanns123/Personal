@@ -46,26 +46,27 @@
 /*==============================================================*/
 
 /*Variáveis globais*/
-int erro = 0; //Variável utilizada no controle PID
+char erro = 0; //Variável utilizada no controle PID
 int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
-int curva1 = 0, curva2;
+unsigned char curva1 = 0, curva2;
 char flag = 0;
-int pulse_numberD = 0, pulse_numberE = 0; //variáveis para contagem dos pulsos dos encoders
+unsigned char pulse_numberD = 0, pulse_numberE = 0; //variáveis para contagem dos pulsos dos encoders
 //int *ptr = NULL; //ponteiro utilizado para receber os valores dos sensores frontais
-unsigned int sensores_frontais[6];
+unsigned char sensores_frontais[6];
 
 //Variáveis globais da calibração de sensores
-unsigned int valor_max [] = {1023, 1023, 1023, 1023, 1023, 1023}; //variáveis usadas na calibração do sensores
-unsigned int valor_min [] = {0, 0, 0, 0, 0, 0};
-unsigned int valor_min_abs = 1023, valor_max_abs = 0;
+unsigned char valor_max [] = {255, 255, 255, 255, 255, 255}; //variáveis usadas na calibração do sensores
+unsigned char valor_min [] = {0, 0, 0, 0, 0, 0};
+unsigned char valor_min_abs = 255, valor_max_abs = 0;
+//unsigned char valor_max_abs = 255;    //colocar assim quando testar no robô, não fica prático simular desta forma
+//unsigned char valor_min_abs = 0;
 
 unsigned int counter = 0;
 
 //Variáveis globais do timer0
-unsigned int millis = 0;
+
 
 //Variáveis globais da UART
-//char s [] = "Início da leitura";
 char buffer[5]; //String que armazena valores de entrada para serem printadas
 volatile char ch; //armazena o caractere lido
 volatile char flag_com = 0; //flag que indica se houve recepção de dado
@@ -95,7 +96,7 @@ void mapeamento();
 void coleta_de_dados();
 void tomada_de_tempo();
 void entrou_na_curva();
-void parada(int value_erro);
+void parada();
 void calibra_sensores();
 void seta_calibracao();
 void sensores();
@@ -103,7 +104,6 @@ void setup();
 void setup_Hardware();
 void setup_logica();
 void loop();
-void area_de_parada(int PWM_Curva);
 void sentido_de_giro(int PWM_Curva, int error);
 void PWM_limit();
 void correcao_do_PWM(int PWMR);
@@ -114,12 +114,11 @@ ISR(USART_RX_vect) {
     ch = UDR0; //Faz a leitura do buffer da serial
 
     UART_enviaCaractere(ch); //Envia o caractere lido para o computador
-    flag_com = 1; //Aciona o flag de comunicação
+    //flag_com = 1; //Aciona o flag de comunicação
 }
 
 ISR(TIMER0_OVF_vect) {
-    TCNT0 = 240; //Recarrega o Timer 0 para que a contagem seja 1ms novamente
-    millis++; //Incrementa a variável millis a cada 1ms
+    TCNT0 = 56; //Recarrega o Timer 0 para que a contagem seja 1ms novamente
     estrategia();
 }//end TIMER_0
 
@@ -201,8 +200,8 @@ void setup_logica() {
 
 void INT_INIT()
 {
-    TCCR0B = 0b00000101; //TC0 com prescaler de 1024
-    TCNT0 = 240; //Inicia a contagem em 100 para, no final, gerar 1ms
+    TCCR0B = 0b00000010; //TC0 com prescaler de 8
+    TCNT0 = 56; //Inicia a contagem em 100 para, no final, gerar 100us
     TIMSK0 = 0b00000001; //habilita a interrupção do TC0
 
     EICRA = 0x05; //qualquer mudança de estado nos pinos INT0 e INT1
@@ -271,7 +270,7 @@ void estrategia() {
     /*Utilização do PB3 e PB4 como entrada para o dip switch de 2 vias*/
 
     char sw; //variável do switch
-    sw = 0b00000011; //determinação de 8 bits para uma lógica AND com o PINx
+    sw = 0b00000001; //determinação de 8 bits para uma lógica AND com o PINx
 
     sw &= PINB >> 3; //lógica AND com a leitura dos pinos deslocados três bits à direta
 
@@ -279,19 +278,12 @@ void estrategia() {
     {
         case 0:
             //esquerdo pino 4 - PD2
-            UART_config(); //Inicializa a comunicação UART
+            UART_config(16); //Inicializa a comunicação UART com 57.6kbps
             flag = 1; //variável de controle para a função entrou_na_curva
             mapeamento(); //estrategia de mapeamento
             break;
 
         case 1:
-            //esquerdo pino 4 - PD2
-            UART_config(); //Inicializa a comunicação UART
-            sei(); //Habilita as interrupções
-            coleta_de_dados(); //estratégia de coleta de dados
-            break;
-
-        case 2:
             //esquerdo pino 4 - PD2
             tomada_de_tempo(); //estratégia de tomada de tempo
             break;
@@ -305,43 +297,19 @@ void mapeamento() {
     static unsigned int PWMR = 400; // valor da força do motor em linha reta
     static unsigned int PWM_Curva = 350; //PWM ao entrar na curva
     counter++;
-    if(counter == 2)
+    parada();   //verifica se é parada a cada 100us
+    if(counter == 5)    //em 500us...
     {
         sensores(); //faz a leitura dos sensores e se estiverem com valores fora do limiar, a correção será feita.
 
         correcao_do_PWM(PWMR);
-        sprintf(buffer, "%5d\n", erro); //Converte para string
-        UART_enviaString(buffer); //Envia para o computador
-        UART_enviaCaractere(0x0D); //pula linha
-
-        area_de_parada(PWM_Curva); //Verfica se é uma parada ou um cruzamento
         sentido_de_giro(PWM_Curva, erro); //Verifica qual o sentido da curva
         counter = 0;
     }
-
-}
-
-void coleta_de_dados() {
-    static unsigned int PWMR = 600; // valor da força do motor em linha reta
-    static unsigned int PWM_Curva = 500; //PWM ao entrar na curva
     
-    counter++;
-    if(counter == 2)
-    {
-        sensores(); //faz a leitura dos sensores e se estiverem com valores fora do limiar, a correção será feita.
-        correcao_do_PWM(PWMR); //controle PID
-        PWM_limit(); //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
-        sprintf(buffer, "Erro %5d\n", erro); //Converte para string
-        UART_enviaString(buffer); //Envia para o computador
-        UART_enviaCaractere(0x0D); //pula linha
-
-
-        area_de_parada(PWM_Curva); //Verfica se é uma parada ou um cruzamento
-        sentido_de_giro(PWM_Curva, erro); //Verifica qual o sentido da curva
-        counter = 0;
-    }
 
 }
+
 
 void tomada_de_tempo() {
 
@@ -360,8 +328,6 @@ void tomada_de_tempo() {
         correcao_do_PWM(PWMR); //controle PID
         PWM_limit(); //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
 
-
-        area_de_parada(PWM_Curva); //Verfica se é uma parada ou um cruzamento
         sentido_de_giro(PWM_Curva, erro); //Verifica qual o sentido da curva
         counter = 0;
     }
@@ -369,7 +335,7 @@ void tomada_de_tempo() {
 
 }
 
-int PID_encoderD(int duty) {
+/*int PID_encoderD(int duty) {
     int RPM_ideal = duty * 3; //PWMR para PID reta e PWMC para PID_curva
     int RPM_encoder = pulse_numberD * 150; //RPM medido pelo encoder
 
@@ -418,7 +384,7 @@ int PID_encoderE(int duty) {
     return Turn;
 
 
-}
+}*/
 
 void count_pulsesD() {
     static int Encoder_C1Last = 0, direction_m;
@@ -463,7 +429,7 @@ void count_pulsesE() {
 
 }
 
-int calculo_do_raio() //esta função calcula o raio a partir da disância percorrida pelas duas rodas do robô
+/*int calculo_do_raio() //esta função calcula o raio a partir da disância percorrida pelas duas rodas do robô
 {
     static unsigned int raio = 0;
     unsigned int diametro = 126; //126mm, diâmetro sas rodas
@@ -480,7 +446,7 @@ int calculo_do_raio() //esta função calcula o raio a partir da disância percorri
     }
 
     return raio;
-}
+}*/
 
 //=========Funções visíveis ao usuário===========//
 //reavaliar esta função devido à pista possuir um "S" e somente três marcadores de curva
@@ -583,7 +549,7 @@ void entrou_na_curva() {
     }
 }
 
-void parada(int value_erro) {
+void parada() {
 
     static char contador = 0, numParada = 4; // Borda   //contador - número de marcadores de curva;
     static char parada = 0;
@@ -659,41 +625,6 @@ void sensores() {
     }
 }
 
-void area_de_parada(int PWM_Curva) {
-    //--------------->AREA DOS SENSORES<---------------
-    static int ejetor = 0;
-    static unsigned int delta_T = 0;
-    static unsigned int tempo_atual = 0;
-    static unsigned int timer2, TempoEspera = 100;
-
-    tempo_atual = millis;
-    delta_T = tempo_atual - timer2;
-    switch (ejetor) {
-        case 0:
-            if ((tst_bit(leitura_curva, sensor_de_curva)) || (tst_bit(leitura_parada, sensor_de_parada)))//verifica se sos sensores estão em nível 0
-            {
-                timer2 = tempo_atual;
-                ejetor = 1;
-            }
-            break;
-
-        case 1:
-            if ((delta_T) > TempoEspera) {
-                parada(erro); // Verifica se é um marcador de parada
-                timer2 = 0;
-                ejetor = 0;
-                //ejetor = 2;
-            }
-            break;
-
-            /*case 2:
-                if ((!(tst_bit(leitura_curva, sensor_de_curva))) && (!(tst_bit(leitura_parada, sensor_de_parada)))) {
-                    timer2 = 0;
-                    ejetor = 0;
-                }
-                break;*/
-    }
-}
 
 void sentido_de_giro(int PWM_Curva, int error) {
     //-----> Área do senstido de giro
@@ -705,11 +636,11 @@ void sentido_de_giro(int PWM_Curva, int error) {
         //necessário teste com monitor serial
         //estudar a melhor quantidade de sensores e seu espaçamento
     {
-        u_encE = PID_encoderE(PWM_Curva);
-        u_encD = PID_encoderD(PWM_Curva); //Cálculo dos PIDs
+        //u_encE = PID_encoderE(PWM_Curva);
+        //u_encD = PID_encoderD(PWM_Curva); //Cálculo dos PIDs
         u_curva = PID(error);
-        PWMA_C = PWM_Curva - u_curva - u_encD + u_encE; //atribuição do PID no PWM dos motores
-        PWMB_C = PWM_Curva + u_curva + u_encD - u_encE;
+        PWMA_C = PWM_Curva - u_curva;// - u_encD + u_encE; //atribuição do PID no PWM dos motores
+        PWMB_C = PWM_Curva + u_curva;// + u_encD - u_encE;
         frente();
         setDuty_1(PWMA_C);
         setDuty_2(PWMB_C);
@@ -760,11 +691,11 @@ void correcao_do_PWM(int PWMR)
     //--------------->AREA DO PID<---------------
 
     u = PID(erro);
-    u_encD = PID_encoderD(PWMR);
-    u_encE = PID_encoderE(PWMR);
+    //u_encD = PID_encoderD(PWMR);
+    //u_encE = PID_encoderE(PWMR);
 
-    PWMA = PWMR - u - u_encD + u_encE;
-    PWMB = PWMR + u + u_encD - u_encD;
+    PWMA = PWMR - u; //- u_encD + u_encE;
+    PWMB = PWMR + u; //+ u_encD - u_encD;
 
     frente();
     setDuty_1(PWMA);
