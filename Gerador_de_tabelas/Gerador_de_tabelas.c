@@ -93,18 +93,18 @@ int main(){
         {
             fprintf(file, "%2d/%2d/%d,", quarta, mes, ano);
             retorno = 0;
-            escreve_nomes(10,contador);
-            contador++;
+            escreve_nomes(10,correcao);
+            //contador++;
             correcao = 1;
         }
 
         else
         {
+            correcao = 1;
             fprintf(file, "%2d/%2d/%d,", sabado, mes2, ano2);
             retorno = 1;
-            escreve_nomes(11,contador);
+            escreve_nomes(11,correcao);
             contador++;
-            correcao = 1;
         }
 
 
@@ -113,14 +113,14 @@ int main(){
         if(!retorno)
         {
             fprintf(file, "%2d/%2d/%d,", sabado, mes2, ano2);
-            escreve_nomes(11,contador);
-            contador++;
+            escreve_nomes(11,correcao);
+            //contador++;
         }
         else
         {
             fprintf(file, "%2d/%2d/%d,", quarta, mes, ano);
-            escreve_nomes(10,contador);
-            contador++;
+            escreve_nomes(10,correcao);
+            //contador++;
         }
 
         fprintf(file, "\n");
@@ -467,113 +467,6 @@ void escreve_nomes(int num, char opt)
 
         }
 
-        //melhorar essa parte do algoritmo para ler o vetor atual e o anterior
-        /*if(opt%2)   //leituras pares
-            nomes_atual [j] = nomes[numero_aleatorio];
-
-        else    //leituras ímpares
-            nomes_anterior [j] = nomes[numero_aleatorio];
-
-        if(linha%2)
-        {
-
-            nomes_proximo[j] = nomes_anterior[j];
-        }*/
-
-
-        //Assim que ler todos os vetores tanto de sábado quanto de quarta, compará-los
-        /*if(correcao && j == 3)
-        {
-
-
-            for(int i = 0; i < 4; i++)
-            {
-                //printf("%s", nomes_atual[i]);
-                if(!strcmp(nomes_atual[i], nomes_anterior[i]))
-                {
-                    //caracter += 10;
-                    if(!strcmp(nomes_atual[0], nomes_anterior[0]))
-                    {
-                        fseek(file, caracter,SEEK_SET);
-                        numero_aleatorio = sorteio_de_nomes(i, num);
-                        fprintf(file, "%10s,", nomes[numero_aleatorio]);
-                        if(!(opt%2))
-                        {
-                            nomes_anterior[0] = nomes[numero_aleatorio];
-                            //printf("%s", nomes_anterior[i]);
-                        }
-                        else if((opt%2) && opt > 1)
-                        {
-                            nomes_atual[0] = nomes[numero_aleatorio];
-                            //printf("%s", nomes_atual[i]);
-                        }
-                    }
-
-                    else
-                    {
-                        if(!(opt%2))
-                        {
-                            fseek(file, caracter + (strlen(nomes_anterior[i]) * (i+1)),SEEK_SET); //posicionamento do cursor onde está o nome repetido
-                            numero_aleatorio = sorteio_de_nomes(i, num);
-                            fprintf(file, "%10s,", nomes[numero_aleatorio]);
-                            nomes_anterior[i] = nomes[numero_aleatorio];
-                            //printf("%s", nomes_anterior[i]);
-                        }
-
-                        else if((opt%2) && opt > 1)
-                        {
-                            fseek(file, caracter + (strlen(nomes_atual[i]) * (i+1)),SEEK_SET); //posicionamento do cursor onde está o nome repetido
-                            numero_aleatorio = sorteio_de_nomes(i, num);
-                            fprintf(file, "%10s,", nomes[numero_aleatorio]);
-                            nomes_atual[i] = nomes[numero_aleatorio];
-                            //printf("%s", nomes_atual[i]);
-                        }
-
-                    }
-
-                }
-
-            }
-            fseek(file,0,SEEK_END);
-            correcao = 0;
-            //puts("\n");
-        }*/
-
-        /*if(!(linha%2) && j == 3)
-        {
-          for(int i = 0; i < 4; i++)
-          {
-              //printf("%s", nomes_atual[i]);
-              if(!strcmp(nomes_anterior[i], nomes_proximo[i]))
-              {
-                  caracter += 16;
-                  printf("encontrou->%d\n", caracter);
-                  if(!strcmp(nomes_proximo[0], nomes_anterior[0]))
-                  {
-                      fseek(file, caracter,SEEK_SET);
-                      numero_aleatorio = sorteio_de_nomes(i, num);
-                      fprintf(file, "%10s,", nomes[numero_aleatorio]);
-                      nomes_anterior[0] = nomes[numero_aleatorio];
-                  }
-
-                  else
-                  {
-
-                    fseek(file, caracter + (strlen(nomes_anterior[i]) * (i+1)),SEEK_SET); //posicionamento do cursor onde está o nome repetido
-                    numero_aleatorio = sorteio_de_nomes(i, num);
-                    fprintf(file, "%10s,", nomes[numero_aleatorio]);
-                    nomes_anterior[i] = nomes[numero_aleatorio];
-
-
-                  }
-
-              }
-
-          }
-          fseek(file,0,SEEK_END);
-          correcao = 0;
-          //puts("\n");
-      }*/
 
         fprintf(file, "%10s,", nomes[numero_aleatorio]);
 
