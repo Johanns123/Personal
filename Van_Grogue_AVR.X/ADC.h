@@ -30,10 +30,10 @@ void ADC_conv_ch (unsigned char canal) {
             
 }
 
-int ADC_ler ( void ) {
+unsigned char ADC_ler () {
     
-    int dado = ADCL;
+    /*int dado = ADCL;
     dado |= ADCH << 8;
-    
-    return dado;
+    return dado;*/
+    return ADCL;
 }
