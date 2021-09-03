@@ -17,9 +17,7 @@
 #include "PWM_10_bits.h"      //Biblioteca de PWM fast mode de 10 bits
 #include "Driver_motor.h"     //Biblioteca das funções de controle dos motores
 #include "PID.h"              //Biblioteca do controle PID
-//#include "configbits.txt"   //configura os fusíveis
 /*============================================================*/
-
 
 //variáveis de comando para os registradores
 #define set_bit(y,bit) (y|=(1<<bit)) //coloca em 1 o bit x da variável Y
@@ -38,7 +36,7 @@
 /*==============================================================*/
 
 /*Variáveis globais*/
-int erro = 0; //Área PID
+char erro = 0; //Área PID
 int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
 //int *ptr = NULL;                                        //ponteiro utilizado para receber os valores dos sensores frontais
 unsigned char sensores_frontais[6];
@@ -52,7 +50,6 @@ unsigned char valor_min_abs = 255;
 //unsigned char valor_min_abs = 0;
 
 //Variáveis globais do timer0
-unsigned int millis = 0;
 unsigned char counter1 = 0, counter2 = 0;
 
 //Variáveis globais da UART
@@ -61,9 +58,10 @@ volatile char ch; //armazena o caractere lido
 volatile char flag_com = 0; //flag que indica se houve recepção de dado
 // Interrupção da UART
 
-
 /*======================================================*/
 
+/*Variáveis usadas no controle do loop*/
+char flag0 = 0;
 
 /*tempo =65536 * Prescaler/Fosc = 65536 * 1024/16000000 = 4, 19s
  tempo = X_bit_timer * Prescaler/Fosc
@@ -83,7 +81,6 @@ void setup();
 void setup_Hardware();
 void setup_logica();
 void loop();
-void area_de_parada();
 void sentido_de_giro();
 void PWM_limit();
 void correcao_do_PWM();
@@ -99,16 +96,16 @@ ISR(USART_RX_vect) {
 }
 
 ISR(TIMER0_OVF_vect) {
-    TCNT0 = 240; //Recarrega o Timer 0 para que a contagem seja 1ms novamente
-    millis++; //Incrementa a variável millis a cada 1ms
+    TCNT0 = 56; //Recarrega o Timer 0 para que a contagem seja 1ms novamente
     counter1++; //incrementa a cada 1ms
     //counter2++; //increenta a cada 1ms
     if(counter1 == 2)   //tempo suficiente para a leitura dos sensores frontais
     {   sensores(); //faz a leitura dos sensores e se estiverem com valores fora do limiar, a correção será feita.
         correcao_do_PWM(); //controle PID
         PWM_limit();       //Muda o valor do PWM caso o PID gere um valor acima de 8 bits no final
-        area_de_parada(); //Verfica se é uma parada ou um cruzamento
         sentido_de_giro(); //Verifica qual o sentido da curva
+        parada(erro); // Verifica se é um marcador de parada
+
         counter1 = 0;
     }
     //counter2 = 0;
@@ -191,8 +188,8 @@ void setup_logica(){
 void INT_INIT()
 {
         
-    TCCR0B = 0b00000101; //TC0 com prescaler de 1024
-    TCNT0 = 240; //Inicia a contagem em 100 para, no final, gerar 1ms
+    TCCR0B = 0b00000010; //TC0 com prescaler de 8
+    TCNT0 = 56; //Inicia a contagem em 56 para, no final, gerar 100us
     TIMSK0 = 0b00000001; //habilita a interrupção do TC0
 }
 
@@ -284,8 +281,8 @@ void ADC_maq () {
     }
 }*/
 
-
-void parada(int value_erro) {
+void parada(int value_erro) 
+{
 
     static char contador = 0, numcurva = 10; // Borda   //contador - número de marcadores de curva;
     static char parada = 0;
@@ -376,46 +373,9 @@ void sensores() {
     }
 }
 
-//Como vamos usar timer e vamos temporizar as funções, esta função pode ser removida
-//e a função que era chamada pode ser chamada direto pelo timer
-void area_de_parada() {
-    //--------------->AREA DOS SENSORES<---------------
-    static char ejetor = 0;
-    static unsigned char delta_T = 0;
-    static unsigned int tempo_atual = 0;
-    static unsigned int timer2;
-    static unsigned char TempoEspera = 100;
-    
-    tempo_atual = millis;
-    delta_T = tempo_atual - timer2;
-    switch (ejetor) {
-        case 0:
-            if ((tst_bit(leitura_curva, sensor_de_curva)) || (tst_bit(leitura_parada, sensor_de_parada)))
-            {
-                timer2 = tempo_atual;
-                ejetor = 1;
-            }
-            break;
 
-        case 1:
-            if ((delta_T) > TempoEspera) {
-                parada(erro); // Verifica se é um marcador de parada
-                timer2 = 0;
-                ejetor = 0;
-                //ejetor = 2;
-            }
-            break;
-
-        /*case 2:
-            if ((tst_bit(leitura_curva, sensor_de_curva)) && (tst_bit(leitura_parada, sensor_de_parada))) {
-                timer2 = 0;
-                ejetor = 0;
-            }
-            break;*/
-    }
-}
-
-void sentido_de_giro() {
+void sentido_de_giro()
+{
     //-----> Área do senstido de giro
     unsigned char u_curva = 0;
     static unsigned int PWMA_C = 0, PWMB_C = 0; //PWM de curva com ajuste do PID;
@@ -465,10 +425,11 @@ void correcao_do_PWM() {
     static unsigned int PWMR = 400; // valor da força do motor em linha reta
     unsigned char u = 0; //valor de retorno do PID
     
-    static int peso [] = {-3, -2, -1, 1, 2, 3}; //utilizando um prescale de 2000
+    static char peso [] = {-3, -2, -1, 1, 2, 3}; //utilizando um prescale de 2000
     //os pesos precisarão ser corrigidos pois os sensores do Van Grogue estão um pouco assimétricos
     
-    for (int j = 0; j < 3; j++) {
+    for (int j = 0; j < 3; j++) 
+    {
         soma_esquerdo += (sensores_frontais[j] * peso[j]);
         soma_direito += (sensores_frontais[5-j] * peso[5 - j]);
     }
