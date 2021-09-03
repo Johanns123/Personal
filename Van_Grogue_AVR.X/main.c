@@ -41,7 +41,7 @@
 int erro = 0; //Área PID
 int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
 //int *ptr = NULL;                                        //ponteiro utilizado para receber os valores dos sensores frontais
-int sensores_frontais[6];
+unsigned char sensores_frontais[6];
 
 //Variáveis globais da calibração de sensores
 unsigned char valor_max[6] = {0, 0, 0, 0, 0, 0};
@@ -53,7 +53,7 @@ unsigned char valor_min_abs = 255;
 
 //Variáveis globais do timer0
 unsigned int millis = 0;
-unsigned int counter1 = 0, counter2 = 0;
+unsigned char counter1 = 0, counter2 = 0;
 
 //Variáveis globais da UART
 char buffer[5]; //String que armazena valores de entrada para serem printadas
@@ -158,8 +158,8 @@ void setup_Hardware(){
     
     TCCR1A = 0xA2; //Configura operação em fast PWM, utilizando registradores OCR1x para comparação
 
-    setFreq(4); //Seleciona opção para frequência
-
+    setFreq(3); //Seleciona opção para frequência
+    //250Hz de PWM
 }
 
 void setup_logica(){
@@ -346,6 +346,19 @@ void seta_calibracao() {
         }
 
     }
+    
+    //Este é o algoritmo a ser usado no robô. Desmomente antes de compilar e comente o outro.
+    /*for (int i = 0; i < 6; i++) {
+        if (valor_min [i] > valor_min_abs && valor_min[i] !=0 ) //esse !0 foi colocado pois estava havendo um bug ao simular
+        {
+            valor_min_abs = valor_min [i];
+        } 
+        
+        if (valor_max [i] < valor_max_abs) {
+            valor_max_abs = valor_max [i];
+        }
+
+    }*/
 }
 
 void sensores() {
@@ -363,12 +376,15 @@ void sensores() {
     }
 }
 
+//Como vamos usar timer e vamos temporizar as funções, esta função pode ser removida
+//e a função que era chamada pode ser chamada direto pelo timer
 void area_de_parada() {
     //--------------->AREA DOS SENSORES<---------------
-    static int ejetor = 0;
-    static unsigned int delta_T = 0;
+    static char ejetor = 0;
+    static unsigned char delta_T = 0;
     static unsigned int tempo_atual = 0;
-    static unsigned int timer2, TempoEspera = 100;
+    static unsigned int timer2;
+    static unsigned char TempoEspera = 100;
     
     tempo_atual = millis;
     delta_T = tempo_atual - timer2;
@@ -401,7 +417,7 @@ void area_de_parada() {
 
 void sentido_de_giro() {
     //-----> Área do senstido de giro
-    int u_curva = 0;
+    unsigned char u_curva = 0;
     static unsigned int PWMA_C = 0, PWMB_C = 0; //PWM de curva com ajuste do PID;
     static unsigned int PWM_Curva = 350; //PWM ao entrar na curva
 
@@ -410,6 +426,7 @@ void sentido_de_giro() {
         //necessário teste com monitor serial
         //estudar a melhor quantidade de sensores e seu espaçamento
     {
+        //colocar  PID no loop usando flags
         u_curva = PID(erro);
         PWMA_C = PWM_Curva - u_curva;
         PWMB_C = PWM_Curva + u_curva;
@@ -442,14 +459,17 @@ void PWM_limit() {
 
 void correcao_do_PWM() {
 
-    int soma_direito = 0, soma_esquerdo = 0, denominador_direito = 6, denominador_esquerdo = 6, soma_total = 0;
+    unsigned int soma_direito = 0, denominador_direito = 6, denominador_esquerdo = 6;
+    int soma_esquerdo = 0;
+    unsigned char soma_total = 0;   //caso aumente o peso da média_ponderada, tomar cuidado com a variável char
     static unsigned int PWMR = 400; // valor da força do motor em linha reta
-    int u = 0; //valor de retorno do PID
+    unsigned char u = 0; //valor de retorno do PID
     
     static int peso [] = {-3, -2, -1, 1, 2, 3}; //utilizando um prescale de 2000
-
+    //os pesos precisarão ser corrigidos pois os sensores do Van Grogue estão um pouco assimétricos
+    
     for (int j = 0; j < 3; j++) {
-         soma_esquerdo += (sensores_frontais[j] * peso[j]);
+        soma_esquerdo += (sensores_frontais[j] * peso[j]);
         soma_direito += (sensores_frontais[5-j] * peso[5 - j]);
     }
 
@@ -459,6 +479,7 @@ void correcao_do_PWM() {
 
     /*sprintf(buffer, "Erro = %5d\n", erro); //Converte para string
     UART_enviaString(buffer); //Envia para o computador
+    UART_enviaHex(erro);
     UART_enviaCaractere(0x0D); //pula linha*/   /*usada somente para mapear*/
 
     //--------------->AREA DO PID<---------------
