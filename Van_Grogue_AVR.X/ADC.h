@@ -5,19 +5,19 @@
  * -----------------------------------------------------------------*/
 
 void ADC_init (void) {
-     //Fosc = 16MHz -> Tosc = 62,5ns
-    //Fadc_max = 200kHz -> Tadc_min = 5us
-    // Tadc_min / Tosc = 80 -> CK/128 - TADC_resultante = 8us
-    //Primeira conversão = 25 ciclos de AD = 25 * 8us
-    //Demais conversões = 13 ciclos de AD = 13 *8us
-    //Tempo total para todas as conversões = (25*8) + (13*8*6) = 720us
-    //720us sem contar os ciclos de máquina para executar as funções e o switch
-    //Logo, atentar à temporização de 1ms
+    //FADC = 1MHz
+    //Tadc = 1/1MHz = 1us
+    //Primeira Conversão = 25*1 = 25us
+    //Demais conversões = 14*1 = 14us
+    //Tempo total do prieiro ciclo = (25*1) + (14*1*5) = 95us
+    //Tempo das demais conversões = 14*1*6 = 84us
+    //Utilizando teoria de amostragem -> 168->190us
+
     
-    ADMUX = 0x40; //0100-0000
-    ADCSRA = 0x8f; //1000-1111
-    ADCSRB = 0x00; // 0000-0000
-    DIDR0 = 0x3f;// 0011-1111
+    ADMUX = 0x40; //0100-0000   //Referência no AVCC
+    ADCSRA = 0x8c; //1000-1100  //ADC habilitado, interrupção do AD habilitado e prescaler de 16 - 1MHz
+    ADCSRB = 0x00; // 0000-0000 //Modo livre
+    DIDR0 = 0x3f;// 0011-1111   //Desabilita a entrada digital desses terminais
      
 }
 
