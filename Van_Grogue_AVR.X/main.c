@@ -6,6 +6,8 @@
  * Last update on July 7th of 2021 at 15:43
  */
 
+/*Pro Jeff ficar feliz, aqui jás um comentário :)*/
+
 /*Bibliotecas e frequência do uc*/
 #define F_CPU 16000000        //define a frequencia do uC para 16MHz
 #include <avr/io.h>           //Biblioteca geral dos AVR
