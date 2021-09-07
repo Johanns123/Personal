@@ -72,7 +72,7 @@ ISR(PCINT0_vect) {
 }
 
 void main() {
-    DDRD = 0x00; //Todo PORTD como saída
+    DDRD = 0xff; //Todo PORTD como saída
     PORTD = 0x00; //inicia todos do PORTD em LOW
     DDRB &= ~(1 << botao1) &~(1 << botao2) &~(1 << botao3); //PORTB como entrada
     PORTB = 0x03; //resistores de pull-up internos desabilitados
