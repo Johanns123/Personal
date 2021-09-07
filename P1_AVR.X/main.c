@@ -8,6 +8,7 @@
 #include <avr/pgmspace.h>   //para o uso do PROGMEM, gravação de dados na memória flash
 #include "LCD.h"
 #include "ADC.h"
+#include <string.h>
 
 
 //variáveis de comando para os registradores
@@ -31,7 +32,7 @@
 
 //Variáveis globais
 //================
-int cont1 = 0, cont2 = 0, max_count1 = 0, max_count2 = 0;
+int cont1 = 0, cont2 = 0, cont3 = 0, cont4 = 0, max_count1 = 0, max_count2 = 0, value_AD;
 int ADC_dados;
 char maq_display [16] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07
                       , 0x7F, 0x6F, 0x77, 0x7F, 0x39, 0x3F, 0x79, 0x71};
@@ -50,6 +51,7 @@ void setup(void);
 void INT_init(void);
 void f_timer0();
 void f_timer1();
+void f_timer2();
 void ADC_maq();
 void tempos (char valor, char seq);
 void loop();
@@ -57,6 +59,7 @@ void display_maq();
 void f_timers();
 void sequencia1();
 void sequencia2();
+void f_int_ADC();
 
 ISR(TIMER0_OVF_vect)
 {   TCNT0 = 255;
@@ -82,7 +85,7 @@ ISR(PCINT1_vect) {
     
     else if (!tst_bit(PINC, botao3)) //botão2 pressionado?
     {
-        pausa = 1;
+        pausa ^= 0x01;
     }
 
 
@@ -97,10 +100,11 @@ ISR(ADC_vect)
 int main() {
     
     setup_hardware();
-    setup();
     INT_init();
-    
+    ADC_init();
+    //inic_LCD_4bits();
     sei();
+    setup();
 
     while (1) {
         loop();
@@ -124,11 +128,16 @@ void setup(void)
 {
     max_count1 = 200;
     max_count2 = 200;
+    ADC_maq();
+    strcpy(linha1, "Johann");
+    strcpy(linha2, "S1 C S2 C");
 }
 
 void loop()
 {
-
+    /*escreve_LCD(linha1);
+    cmd_LCD(0xc0, 0); //vai pra linha de baixo
+    escreve_LCD(linha2);*/
 }
 void INT_init(void)
 {
@@ -141,14 +150,12 @@ void INT_init(void)
     PCMSK1 = 0x0d; //Habilita PCINT8 e PCINT10 e PCINT11
 }
 
+
 void f_timers(){
-    static unsigned char cont_disp = 0;
-    if(cont_disp < 4)   cont_disp++;
-    else
-    {
-        display_maq();
-        cont_disp = 0;
-    }
+
+    display_maq();
+    cont3++; cont4++;
+    
     if(cont1 < max_count1) cont1++;
     else
     {
@@ -162,9 +169,41 @@ void f_timers(){
         f_timer1();
         cont2 = 0;
     }
+    
+    if(cont3 == 10)
+    {
+        f_int_ADC();
+        cont3 = 0;
+    }
+    
+    if(cont4 == 20)
+    {
+        f_timer2();
+        cont4 = 0;
+    }
+
+
 }
 void f_timer0()
-{
+{   
+    if(!value_AD)
+    {
+        reverso1 = 0;
+    }
+    else if(value_AD == 1)
+    {
+        reverso1 = 1;
+    }
+    
+    else if(value_AD == 2)
+    {
+        reverso1 = 0;
+    }
+    
+    else
+    {
+        reverso1 = 1;
+    }
     sequencia1();
         
         
@@ -172,13 +211,37 @@ void f_timer0()
 
 void f_timer1()
 {
+    if(!value_AD)
+    {
+        reverso2 = 0;
+        //strcpy(linha2, "S1 C S2 C");
+    }
+    else if(value_AD == 1)
+    {
+        reverso2 = 0;
+        //strcpy(linha2, "S1 D S2 C");
+    }
+    
+    else if(value_AD == 2)
+    {
+        reverso2 = 1;
+        //strcpy(linha2, "S1 C S2 D");
+    }
+    
+    else
+    {
+        reverso2 = 1;
+        //strcpy(linha2, "S1 D S2 D");
+    }
     sequencia2();
 }
 
-void ADC_maq () {
-    
+void ADC_maq () 
+{
+
     ADC_conv_ch(1);
-    ADC_dados = ADC_ler();    
+    ADC_dados = ADC_ler();
+    
     
 }
 
@@ -251,9 +314,16 @@ void sequencia1()
         switch(numeros)
         {
             case 0:
+                if(reverso1)
+                {
+                    numeros = 50;
+                }
+                else
+                {
+                    numeros = 25;
+                }
                 N1 = 0;
                 N2 = 0;
-                numeros = 25;
                 break;
             case 25:
                 if(reverso1)
@@ -271,7 +341,7 @@ void sequencia1()
             case 65:
                 if(reverso1)
                 {
-                    numeros = 0;  
+                    numeros = 25;  
                 }
                 else
                 {
@@ -284,7 +354,7 @@ void sequencia1()
             case 56:
                 if(reverso1)
                 {
-                    numeros = 0;  
+                    numeros = 65;  
                 }
                 else
                 {
@@ -297,7 +367,7 @@ void sequencia1()
             case 43:
                 if(reverso1)
                 {
-                    numeros = 0;  
+                    numeros = 56;  
                 }
                 else
                 {
@@ -310,7 +380,7 @@ void sequencia1()
             case 69:
                 if(reverso1)
                 {
-                    numeros = 0;  
+                    numeros = 43;  
                 }
                 else
                 {
@@ -323,7 +393,7 @@ void sequencia1()
             case 68:
                 if(reverso1)
                 {
-                    numeros = 0;  
+                    numeros = 69;  
                 }
                 else
                 {
@@ -336,7 +406,7 @@ void sequencia1()
             case 41:
                 if(reverso1)
                 {
-                    numeros = 0;  
+                    numeros = 68;  
                 }
                 else
                 {
@@ -349,7 +419,7 @@ void sequencia1()
             case 74:
                 if(reverso1)
                 {
-                    numeros = 0;  
+                    numeros = 41;  
                 }
                 else
                 {
@@ -362,7 +432,7 @@ void sequencia1()
             case 35:
                 if(reverso1)
                 {
-                    numeros = 0;  
+                    numeros = 74;  
                 }
                 else
                 {
@@ -375,7 +445,7 @@ void sequencia1()
             case 100:
                 if(reverso1)
                 {
-                    numeros = 0;  
+                    numeros = 35;  
                 }
                 else
                 {
@@ -388,7 +458,7 @@ void sequencia1()
             case 57:
                 if(reverso1)
                 {
-                    numeros = 0;  
+                    numeros = 100;  
                 }
                 else
                 {
@@ -401,7 +471,7 @@ void sequencia1()
             case 50:
                 if(reverso1)
                 {
-                    numeros = 0;  
+                    numeros = 57;  
                 }
                 else
                 {
@@ -418,6 +488,8 @@ void sequencia1()
                 break;
         }
     }
+    
+    else;
 }
 
 void sequencia2()
@@ -429,9 +501,16 @@ void sequencia2()
         switch(numeros)
         {
             case 0:
+                if(reverso2)
+                {
+                    numeros = 16;
+                }
+                else
+                {
+                    numeros = 67;
+                }
                 N3 = 0;
                 N4 = 0;
-                numeros = 67;
                 break;
             case 67:
                 if(reverso2)
@@ -596,89 +675,20 @@ void sequencia2()
                 break;
         }
     }
+    
+    else {};
 }
 
-/*
-
-
-#define F_CPU 16000000      //define a frequencia do uC para 16MHz
-#include <avr/io.h>         //biblioteca de mapeamento dos registradores
-#include <util/delay.h>     //biblioteca que gera atraso
-#include <avr/interrupt.h>
-
-//Definições de macros para trabalho com bits
-#define	set_bit(y,bit)	(y|=(1<<bit))	//coloca em 1 o bit x da variável Y
-#define	clr_bit(y,bit)	(y&=~(1<<bit))	//coloca em 0 o bit x da variável Y
-#define cpl_bit(y,bit) 	(y^=(1<<bit))	//troca o estado lógico do bit x da variável Y
-#define tst_bit(y,bit) 	(y&(1<<bit))	//retorna 0 ou 1 conforme leitura do bit
-
-//protótipo das funções de interrupção
-ISR(TIMER1_OVF_vect);
-ISR(TIMER0_OVF_vect);
-
-//Vetor de codificação do display, depende das postas conectadas 0-F
-unsigned char vetor_disp[16] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07
-                                , 0x7F, 0x6F, 0x77, 0x7F, 0x39, 0x3F, 0x79, 0x71};
-
-volatile int contador = 0;      //são volatile pois serão utilizadas na interrupção
-volatile char unidade = 0;
-volatile char dezena = 0;
-volatile char disp = 0;
-
-int main(void) {
-    MCUCR &= 0xef;
-    DDRB = 0xff;    //Todo PORTB como saída
-    PORTB = 0x00;   //inicia todos do PORTD em LOW
-    DDRC = 0xf0;    //PC0-PC3 como entrada
-    PORTC = 0x0d;   //entradas com pull up e PC1 sem
-    DDRD = 0xff;    //Todo PORTD como saída
-    PORTD = 0x00;   //iniciado em low
-    DIDR0 = 0x02;   //desabilita entrada digital de PC1
+void f_int_ADC()
+{
+    if(ADC_dados < 255)                             value_AD = 0;
+    else if(ADC_dados > 255 && ADC_dados < 511)     value_AD = 1;
+    else if(ADC_dados > 511 && ADC_dados < 767)     value_AD = 2;
+    else                                            value_AD = 3;
     
-    TCCR1B = 0b00000101;    //TC1 com prescaler de 1024
-    TCNT1 = 49911;          //inicia a contagem em 49911 para gerar 1s
-    TIMSK1 = 0b00000001;    //habilita a interrupção do TC1
-    
-    TCCR0B = 0b00000101;    //TC0 com precaler de 1024
-    TCNT0 = 100;             //Inicia a contagem em 100 para gerar 10ms
-    TIMSK0 = 0b00000001;     //Habilita a interrupção do TC0
-    
-    sei();                  //habilita a chave de interrupção global
-    
-    
-    while (1) {
-        
-    }
 }
 
-ISR(TIMER1_OVF_vect){
-    TCNT1 = 49911;
-    unidade++;
-    if(unidade == 10){
-        unidade =0;
-        dezena++;
-        if(dezena == 10){
-            dezena = 0;
-        }
-    }
+void f_timer2()
+{
+    PORTD = (reverso1 << PD5) | (reverso2 << PD6);
 }
-
-ISR(TIMER0_OVF_vect){
-    contador++;
-    TCNT0 = 100;
-    if (contador == 1){
-        contador = 0;
-        switch(disp){
-            case 0: clr_bit(PORTD,PD3);
-                    set_bit(PORTD, PD2);
-                    PORTB = vetor_disp[unidade];
-                    disp = 1;
-                    break;
-            case 1: clr_bit(PORTD,PD2);
-                    set_bit(PORTD, PD3);
-                    PORTB = vetor_disp[dezena];
-                    disp = 0;
-                    break;
-        }
-    }
-}*/
