@@ -14,21 +14,18 @@
 //==============================================================
 
 /*Mapeamento de Hardware*/
-#define botao1  PC3
-#define botao2  PC2
-#define botao3  PC0
-#define display PORTB
-#define D1      PD2
-#define D2      PD3
-#define D3      PC4
-#define D4      PC5
+#define display PORTD
+#define D1      PB0
+#define D2      PB1
+#define D3      PB4
+#define D4      PB5
 /*Estruturas*/
 
 
 //Variáveis globais
 //================
 int cont1 = 0, cont2 = 0, cont3 = 0, cont4 = 0, max_count1 = 0, max_count2 = 0;
-int ADC_dados;
+int ADC_dados[6];
 char maq_display [16] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07
                       , 0x7F, 0x6F, 0x77, 0x7F, 0x39, 0x3F, 0x79, 0x71};
 unsigned char VoltCen = 0, VoltDez = 0, VoltUni = 0;
@@ -50,27 +47,13 @@ void sequencia2();
 void f_int_ADC();
 
 ISR(TIMER0_OVF_vect)
-{   TCNT0 = 255;
+{   TCNT0 = 240;
     f_timers();
 
 }
 
 ISR(PCINT1_vect) {
-    if (!tst_bit(PINC, botao1)) //botão1 pressionado?
-    {
 
-    }
-
-    
-    else if (!tst_bit(PINC, botao2)) //botão2 pressionado?
-    {
-
-    }
-    
-    else if (!tst_bit(PINC, botao3)) //botão2 pressionado?
-    {
-
-    }
 
 
 }
@@ -101,8 +84,8 @@ void setup_hardware(void)
     MCUCR &= 0xef;  //Pull up interno habilitado
     DDRB = 0xff;    //Todo PORTB como saída
     PORTB = 0x00;   //inicia todos do PORTD em LOW
-    DDRC = 0xf0;    //PC0-PC3 como entrada
-    PORTC = 0x0d;   //entradas com pull up e PC1 sem
+    //DDRC = 0xf0;    //PC0-PC3 como entrada
+    //PORTC = 0x0d;   //entradas com pull up e PC1 sem
     DDRD = 0xff;    //Todo PORTD como saída
     PORTD = 0x00;   //iniciado em low
     DIDR0 = 0x02;   //desabilita entrada digital de PC1
@@ -121,13 +104,10 @@ void loop()
 }
 void INT_init(void)
 {
-    TCCR0B = 0b00000011; //TC0 com prescaler de 8
-    TCNT0 = 255; //Inicia a contagem em 56 para, no final, gerar 1ms
+    TCCR0B = 0b00000101; //TC0 com prescaler de 1024
+    TCNT0 = 240; //Inicia a contagem em 56 para, no final, gerar 1ms
     TIMSK0 = 0b00000001; //habilita a interrupção do TC0
     
-    
-    PCICR = 0x02; //Habilita interrupção do PCINT0
-    PCMSK1 = 0x0d; //Habilita PCINT8 e PCINT10 e PCINT11
 }
 
 
@@ -167,7 +147,7 @@ void f_timers(){
 void f_timer0()
 {   
 
-    sequencia1();
+   
         
         
 }
@@ -175,39 +155,63 @@ void f_timer0()
 void f_timer1()
 {
 
-    sequencia2();
+    
 }
 
 void ADC_maq () 
 {
 
-    ADC_conv_ch(1);
-    ADC_dados = ADC_ler();
+    static unsigned char estado = 10;
     
+    switch (estado) {
+        
+        case 0:
+            estado = 1;
+            ADC_dados[0] = ADC_ler();
+            ADC_conv_ch(1);
+            break;
+            
+        case 1:
+            estado = 2;
+            ADC_dados[1] = ADC_ler();
+            ADC_conv_ch(2);
+            break;
+            
+        case 2:
+            estado = 3;
+            ADC_dados[2] = ADC_ler();
+            ADC_conv_ch(3);
+            break;
+            
+        case 3:
+            estado = 4;
+            ADC_dados[3] = ADC_ler();
+            ADC_conv_ch(4);
+            break;
+            
+        case 4:
+            estado = 5;
+            ADC_dados[4] = ADC_ler();
+            ADC_conv_ch(5);
+            break;
+            
+        case 5:
+            estado = 0;
+            ADC_dados[5] = ADC_ler();
+            ADC_conv_ch(0);
+            break;
+            
+        default:
+            estado = 0;
+            ADC_conv_ch(0);
+            ADC_dados[0] = ADC_ler();
+            break; 
+    }
     
 }
 
 void tempos (char valor, char seq)
 {   
-    if(seq == 1 && valor)
-    {
-        max_count1 = 800;
-    }
-    
-    else if(seq == 1 && !valor)
-    {
-        max_count1 = 200;
-    }
-    
-    if(seq == 2 && valor)
-    {
-        max_count2 = 800;
-    }
-    
-    else if(seq == 2 && !valor)
-    {
-        max_count2 = 200;
-    }
     
 }
 
@@ -217,30 +221,30 @@ void display_maq()
     switch(estado)
     {
         case 0:
-            clr_bit(PORTC, D4);
-            PORTB = maq_display[VoltUni];
-            set_bit(PORTD, D1);
+            set_bit(PORTB, D4);;
+            PORTD = 0x3e;  //Printar 'V'
+            clr_bit(PORTB, D1);
             estado = 1;
             break;
         
         case 1:
-            clr_bit(PORTD, D1);
-            PORTB = maq_display[VoltDez];
-            set_bit(PORTD, D2);
+            set_bit(PORTB, D1);
+            PORTD = maq_display[VoltUni];
+            clr_bit(PORTB, D2);
             estado = 2;
             break;
         
         case 2:
-            clr_bit(PORTD, D2);
-            PORTB = maq_display[VoltCen] | (1<<PB7);    //número e ponto decimal
-            set_bit(PORTC, D3);
+            set_bit(PORTB, D2);
+            PORTD = maq_display[VoltDez];
+            clr_bit(PORTB, D3);
             estado = 3;
             break;
             
         case 3:
-            clr_bit(PORTC, D3);
-            PORTB = maq_display[0];
-            set_bit(PORTC, D4);
+            set_bit(PORTB, D3);
+            PORTD = maq_display[VoltCen] | (1<<PD7);    //número e ponto decimal
+            clr_bit(PORTB, D4);
             estado = 0;
             break;
         
@@ -261,7 +265,7 @@ void f_int_ADC()
 {
     static unsigned int volt = 0;
     
-    volt = ADC_dados * 500.0 / 1023.0;
+    volt = ADC_dados[5] * 500.0 / 1023.0;
     VoltCen = volt/100;      //429/100 = 4,29 = 4
     VoltDez = (volt%100)/10; //429%100 = 4,29 -> 29/10 = 2,9 = 2
     VoltUni =  volt%10;       //429%10 = 42,9 = 9
