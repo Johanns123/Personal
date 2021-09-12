@@ -8,6 +8,7 @@
 #include <avr/pgmspace.h>   //para o uso do PROGMEM, gravação de dados na memória flash
 #include "LCD.h"
 #include "ADC.h"
+#include "UART.h"
 #include <string.h>
 
 
@@ -22,11 +23,11 @@
 #define botao1  PC3
 #define botao2  PC2
 #define botao3  PC0
-#define display PORTB
-#define D1      PD2
-#define D2      PD3
-#define D3      PC4
-#define D4      PC5
+#define display PORTD
+#define D1      PB0
+#define D2      PB1
+#define D3      PB4
+#define D4      PB5
 /*Estruturas*/
 
 
@@ -62,7 +63,7 @@ void sequencia2();
 void f_int_ADC();
 
 ISR(TIMER0_OVF_vect)
-{   TCNT0 = 255;
+{   TCNT0 = 240;
     f_timers();
 
 }
@@ -114,7 +115,7 @@ int main() {
 }
 void setup_hardware(void)
 {
-    MCUCR &= 0xef;
+    MCUCR &= 0xef;  //Pull up interno habilitado
     DDRB = 0xff;    //Todo PORTB como saída
     PORTB = 0x00;   //inicia todos do PORTD em LOW
     DDRC = 0xf0;    //PC0-PC3 como entrada
@@ -126,6 +127,7 @@ void setup_hardware(void)
 
 void setup(void)
 {
+    //UART_config(16);
     max_count1 = 200;
     max_count2 = 200;
     ADC_maq();
@@ -135,14 +137,17 @@ void setup(void)
 
 void loop()
 {
+    
+    //UART_enviaHex(ADC_dados);
+    //UART_enviaCaractere('\n');
     /*escreve_LCD(linha1);
     cmd_LCD(0xc0, 0); //vai pra linha de baixo
     escreve_LCD(linha2);*/
 }
 void INT_init(void)
 {
-    TCCR0B = 0b00000011; //TC0 com prescaler de 8
-    TCNT0 = 255; //Inicia a contagem em 56 para, no final, gerar 1ms
+    TCCR0B = 0b00000101; //TC0 com prescaler de 1024
+    TCNT0 = 240; //Inicia a contagem em 56 para, no final, gerar 1ms
     TIMSK0 = 0b00000001; //habilita a interrupção do TC0
     
     
@@ -275,30 +280,38 @@ void display_maq()
     switch(estado)
     {
         case 0:
-            clr_bit(PORTC, D4);
-            PORTB = maq_display[N2];
-            set_bit(PORTD, D1);
+            set_bit(PORTB, D4);
+            //clr_bit(PORTB, D4);
+            PORTD = maq_display[N2];
+            clr_bit(PORTB, D1);
+            //set_bit(PORTB, D1);
             estado = 1;
             break;
         
         case 1:
-            clr_bit(PORTD, D1);
-            PORTB = maq_display[N1];
-            set_bit(PORTD, D2);
+            //clr_bit(PORTB, D1);
+            set_bit(PORTB, D1);
+            PORTD = maq_display[N1];
+            //set_bit(PORTB, D2);
+            clr_bit(PORTB, D2);
             estado = 2;
             break;
         
         case 2:
-            clr_bit(PORTD, D2);
-            PORTB = maq_display[N4];
-            set_bit(PORTC, D3);
+            //clr_bit(PORTB, D2);
+            set_bit(PORTB, D2);
+            PORTD = maq_display[N4];
+            //set_bit(PORTB, D3);
+            clr_bit(PORTB, D3);
             estado = 3;
             break;
             
         case 3:
-            clr_bit(PORTC, D3);
-            PORTB = maq_display[N3];
-            set_bit(PORTC, D4);
+            //clr_bit(PORTB, D3);
+            set_bit(PORTB, D3);
+            PORTD = maq_display[N3];
+            //set_bit(PORTB, D4);
+            clr_bit(PORTB, D4);
             estado = 0;
             break;
         
@@ -690,5 +703,5 @@ void f_int_ADC()
 
 void f_timer2()
 {
-    PORTD = (reverso1 << PD5) | (reverso2 << PD6);
+    //PORTB = (reverso1 << PB2) | (reverso2 << PB3);
 }
