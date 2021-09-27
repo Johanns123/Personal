@@ -46,8 +46,8 @@ unsigned char sensores_frontais[6];
 //Variáveis globais da calibração de sensores
 unsigned char valor_max[6] = {0, 0, 0, 0, 0, 0};
 unsigned char valor_min[6] = {255, 255, 255, 255, 255, 255};
-unsigned char valor_max_abs = 0;
-unsigned char valor_min_abs = 255;
+unsigned char valor_max_abs = 255;
+unsigned char valor_min_abs = 0;
 //unsigned char valor_max_abs = 255;    //colocar assim quando testar no robô, não fica prático simular desta forma
 //unsigned char valor_min_abs = 0;
 
@@ -98,10 +98,12 @@ ISR(USART_RX_vect) {
     //flag_com = 1; //Aciona o flag de comunicação
 }
 
-ISR(TIMER0_OVF_vect) {
-    TCNT0 = 56; //Recarrega o Timer 0 para que a contagem seja 1ms novamente
+ISR(TIMER0_OVF_vect) 
+{
+    TCNT0 = 56; //Recarrega o Timer 0 para que a contagem seja 100us novamente
     
     estrategia();
+    
 }//end TIMER_0
 
 ISR(ADC_vect)
@@ -113,7 +115,8 @@ ISR(ADC_vect)
 
 
 /*Função principal*/
-int main(void) {
+int main(void) 
+{
     setup();
 
     while (1) loop();
@@ -298,7 +301,8 @@ void parada()
     static char contador = 0, numcurva = 10; // Borda   //contador - número de marcadores de curva;
     static char parada = 0;
 
-    if ((!tst_bit(leitura_curva, sensor_de_curva)) && tst_bit(leitura_parada, sensor_de_parada)) {
+    if ((!tst_bit(leitura_curva, sensor_de_curva)) && tst_bit(leitura_parada, sensor_de_parada)) 
+    {
         contador++;
         //entrou_na_curva(value_erro); // Verifica se é uma curva
     } 
@@ -318,7 +322,8 @@ void parada()
     }
 }
 
-void calibra_sensores() {
+void calibra_sensores() 
+{
     //=====Função que inicializa a calibração====//
     for (int i = 0; i < 120; i++) {
         for (int i = 0; i < 6; i++) {
@@ -335,7 +340,7 @@ void calibra_sensores() {
         /*
         Após isso determinar o limiar de todos os sensores para que eles tenham os mesmos valores do AD. 
         Para que todos tenham um limite inferior e superior igual.
-         */
+        */
     }
 
 }
@@ -344,19 +349,8 @@ void seta_calibracao() {
     //----> Calibração dos Sensores frontais <----//
 
     //função que seta o limiar dos sensores
+    //Este é o algoritmo a ser usado no robô. Desmcomente antes de compilar e comente o outro.
     for (int i = 0; i < 6; i++) {
-        if (valor_min [i] < valor_min_abs && valor_min[i] !=0 ) {
-            valor_min_abs = valor_min [i];
-        } 
-        
-        if (valor_max [i] > valor_max_abs) {
-            valor_max_abs = valor_max [i];
-        }
-
-    }
-    
-    //Este é o algoritmo a ser usado no robô. Desmomente antes de compilar e comente o outro.
-    /*for (int i = 0; i < 6; i++) {
         if (valor_min [i] > valor_min_abs && valor_min[i] !=0 ) //esse !0 foi colocado pois estava havendo um bug ao simular
         {
             valor_min_abs = valor_min [i];
@@ -366,7 +360,7 @@ void seta_calibracao() {
             valor_max_abs = valor_max [i];
         }
 
-    }*/
+    }
 }
 
 void sensores() {
