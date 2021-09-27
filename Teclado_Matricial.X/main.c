@@ -52,7 +52,6 @@ unsigned int max_timer0, max_timer1, max_timer2, max_timer3;
 unsigned int dado_teclado = 0;
 unsigned int star_lcd = 0;
 unsigned int dado = 0;
-unsigned int dado_v [4] = {0,0,0,0};
 char flag = 1;
 static int dado_teclado_old = 0;
 static unsigned int count = 0;
@@ -229,7 +228,6 @@ void setup_hard (void) {
 
 
 void main (void) {
-    int erase = 3;
     setup_hard();
     while(1) {
         
@@ -238,24 +236,26 @@ void main (void) {
             if(dado_teclado == 11)
             {
                 dado = dado / 10;
-                count = 3;
                 sprintf(linha2, "%d", dado); 
+                if(count == 0)  count = 3;
+                else            count--;
             }
             
             else if(dado_teclado == 12)
             {
-                strcpy(linha2, "");
+                strcpy(linha1, "0");
+                strcpy(linha2, "0");
                 dado = 0;
-                for(int i = 0; i < 4; i++)
-                {
-                    dado_v[i] = 0;
-                }
                 count = 0;
             }
-            
+            else if(dado > 1023)
+            {
+                strcpy(linha2, "Valor incorreto!");
+                dado = 0;
+            }
             else
             {
-                strcpy(linha1, "MARC_MATH_RODR"); 
+                sprintf(linha1, "%.2f%%", (float)dado*100.0/1023); 
                 sprintf(linha2, "%d", dado); 
             }
             mostraLCD();
@@ -435,8 +435,9 @@ void f_int1 (void) {
 void f_int2 (void) {
        
 
+
     PWM1_Set_Duty(dado);
-    
+
 }
 
 
@@ -448,11 +449,12 @@ void f_timer0 (void) {
     if(flag && (dado_teclado!=dado_teclado_old))
     {
         dado_teclado_old = dado_teclado;
-        if(dado_teclado != 11 && dado_teclado != 12)
+        if(dado_teclado != 11 || dado_teclado != 12)
         {
             password();
+            fLCDnew = 1;
         }
-        fLCDnew = 1;
+
     }
     
     /*else if(PORTD && !flag)
@@ -625,33 +627,29 @@ unsigned char ler_teclado(void) {
 
 void password()
 {
-    if(dado_teclado!=11 || dado_teclado!=12){
+    if(dado_teclado!=11 && dado_teclado!=12){
         switch (count)
         {
             case 0:
                 count = 1;
-                dado_v[0] = dado_teclado*1000;
+                dado = dado_teclado;
                 break;
 
             case 1:
                 count = 2;
-                dado_v[1] = dado_teclado*100;
+                dado = dado*10 + dado_teclado;      //dado passado * 10 + dado atual 
                 break;
 
             case 2:
                 count = 3;
-                dado_v[2] = dado_teclado*10;
+                dado = dado*10 + dado_teclado;
                 break;
                
             case 3:
                 count = 0;
-                dado_v[3] = dado_teclado;
+                dado = dado*10 + dado_teclado;
                 break;
-        }
-        dado = dado_v[0] + dado_v[1] + dado_v[2] + dado_v[3];         
+        }         
     }
-    
-    
-    
     
 }
