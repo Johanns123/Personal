@@ -215,26 +215,46 @@ def modelo_close_in_reference():
     #h = line([dc dc], [-160 -55]); set(h, 'Color', 'm');
 
 
-def modelo_alpha_beta_gamma_Path_loss():
-    alpha = float(
-        input("Digite um valor para a constante Alpha: ")
-    )  # perda em relação a distância
-    beta = float(input("Digite um valor para Beta: "))  # valor de deslocamento
-    gamma = float(
-        input("Digite um valor para a constante Gamma: ")
-    )  # perda em relação a freq.
-    d = float(
-        input("Digite a distância em metros entre o transmissor e o receptor: ")
-    )
-    f = float(
-        input("Digite o valor da frequência em Hz para ser usado em Ghz: ")
-    )
-    X = float(input("Digite o valor do desvio padrão: "))
+def modelo_Okumura_Hata():
+    f  = 850 * 10**6    ##freq em Hz
+    d = np.arange(1,20*10**3, 0.1); ##até 20Km
+    hb = 100            ##em m
+    hm = 2              ##em m
+    aHm = 0
+    C = 0
+    ambiente = int(input("Digite 1 para metrô, 2 para cidade pequena, 3 para subúrbio, 4 para ambiente aberto: "))
 
-    PLabg = (10 * alpha * np.log10(d)) + beta + (10 * gamma * np.log10(f)) + X
+    if ambiente == 1:
+        C = 0
+        if f <= 200:
+            aHm = 8.29*(np.log10(1.54*hm)**2) - 1.11
+        else:
+            aHm = 3.2*(np.log10(11.75*hm)**2) - 4.97
 
-    print(PLabg)
+    elif ambiente == 2:
+        C = 0
+        aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
 
+    elif ambiente == 3:
+        aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
+        C = 2*(np.log10(f/28)**2) - 5.4
+
+    elif ambiente == 4:
+        aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
+        C = -4.78*(np.log10(f)**2) + (18.33*np.log10(f)) - 40.98
+
+
+    A = 69.55 + (26.16*np.log10(f)) - (13.82*np.log10(hb)) - aHm
+    B = 44.9 - (6.55*np.log10(hb))
+    PL = A+(B*np.log10(d))+C
+
+    plt.plot(d, PL)
+    plt.xlabel('Distância em metros')
+    plt.ylabel('Path Loss (dB)')
+    plt.title('Modelo Okumura Hata')
+    plt.grid(True)
+
+    plt.show()
 
 # função principal
 acabou = 0
@@ -244,7 +264,7 @@ while acabou == 0:
     opcao = int(
         input(
             "Modelo espaço livre - 1\nModelo log-distância - 2:\nModelo log-normal - 3\nModelo Colse-in-Reference - 4\n"
-            "Modelo Alpha-Betha-Gamma Path Loss - 5\n"
+            "Modelo Okumura Hata - 5\n"
         )
     )
 
@@ -263,7 +283,7 @@ while acabou == 0:
         modelo_close_in_reference()
 
     elif opcao == 5:
-        modelo_alpha_beta_gamma_Path_loss()
+        modelo_Okumura_Hata()
 
     acabou = int(input("Tecle 0 para calcular novamente ou 1 para encerrar: "))
     # fim da função principal
