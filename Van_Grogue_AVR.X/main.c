@@ -151,8 +151,8 @@ void setup_Hardware(){
     
     TCCR1A = 0xA2; //Configura operação em fast PWM, utilizando registradores OCR1x para comparação
 
-    setFreq(3); //Seleciona opção para frequência
-    //250Hz de PWM
+    setFreq(1); //Seleciona opção para frequência
+    //16kHz de PWM
 }
 
 void setup_logica(){
