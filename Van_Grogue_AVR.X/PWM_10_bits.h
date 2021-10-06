@@ -17,7 +17,7 @@ void setDuty_1(int duty) //MotorA
 void setFreq(char option) {
     /*
     TABLE:
-  
+  	//no fast Mode
         option  frequency (as frequências no timer 1 são menores do que as frequências nos timers 0 e 2)
         
           1      16    kHz
@@ -27,5 +27,19 @@ void setFreq(char option) {
           5     15,6    Hz
      */
     TCCR1B = option;
-
+	
+	
+	
+    /*
+    TABLE:
+  	//no phase corret PWM Mode
+        option  frequency (as frequências no timer 1 são menores do que as frequências nos timers 0 e 2)
+        
+          1       8     kHz
+          2       1     kHz
+          3     125      Hz
+          4     31,25    Hz
+          5     7,8      Hz
+     */
+     
 } //end setFrequency
