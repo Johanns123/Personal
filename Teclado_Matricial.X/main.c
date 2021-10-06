@@ -50,6 +50,7 @@ unsigned char n1=1, n2=2, n3=3, n4=4;
 unsigned int valorAD = 0;
 unsigned int max_timer0, max_timer1, max_timer2, max_timer3;
 unsigned int dado_teclado = 0;
+unsigned int PWM = 0;
 unsigned int star_lcd = 0;
 unsigned int dado = 0;
 char flag = 1;
@@ -255,7 +256,7 @@ void main (void) {
             }
             else
             {
-                sprintf(linha1, "%.2f%%", (float)dado*100.0/1023); 
+                sprintf(linha1, "%.2f%%", (float)PWM*100.0/1023); 
                 sprintf(linha2, "%d", dado); 
             }
             mostraLCD();
@@ -422,13 +423,17 @@ void f_int0 (void) {
      
     //escreve_DC(0);
     PWM1_Set_Duty(0);
+    PWM = 0;
+    fLCDnew = 1;
 }
 
 
 void f_int1 (void) {
     
     //escreve_DC(valorAD);
-    PWM1_Set_Duty(valorAD);    
+    PWM1_Set_Duty(valorAD);
+    PWM = valorAD;
+    fLCDnew = 1;
 }
 
 
@@ -437,7 +442,8 @@ void f_int2 (void) {
 
 
     PWM1_Set_Duty(dado);
-
+    PWM = dado;
+    fLCDnew = 1;
 }
 
 
