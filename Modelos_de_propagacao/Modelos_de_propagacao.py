@@ -216,8 +216,8 @@ def modelo_close_in_reference():
 
 
 def modelo_Okumura_Hata():
-    f  = 850 * 10**6    ##freq em Hz
-    d = np.arange(1,20*10**3, 0.1); ##até 20Km
+    f  = 850            ##freq em MHz, uinidade em MHz
+    d = np.arange(1,20, 0.1); ##até 20Km, unidade em Km
     hb = 100            ##em m
     hm = 2              ##em m
     aHm = 0
@@ -237,7 +237,7 @@ def modelo_Okumura_Hata():
 
     elif ambiente == 3:
         aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
-        C = 2*(np.log10(f/28)**2) - 5.4
+        C = -2*(np.log10(f/28)**2) - 5.4
 
     elif ambiente == 4:
         aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
