@@ -14,8 +14,8 @@
 #include <avr/io.h>           //Biblioteca geral dos AVR
 #include <avr/interrupt.h>    //Biblioteca de interrupção
 #include <util/delay.h>       //Biblioteca geradora de atraso
-#include <stdio.h>            //Bilioteca do C
-#include "UART.h"             //Biblioteca da comunicação UART
+//#include <stdio.h>            //Bilioteca do C
+//#include "UART.h"             //Biblioteca da comunicação UART
 #include "ADC.h"              //Biblioteca do conversor AD
 #include "PWM_10_bits.h"      //Biblioteca de PWM fast mode de 10 bits
 #include "Driver_motor.h"     //Biblioteca das funções de controle dos motores  //usado para ponte H tb6612fng
@@ -40,7 +40,8 @@
 
 /*Variáveis globais*/
 char erro = 0;      //variável para cáculo do erro da direção do robô em cima da linha
-int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
+unsigned int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
+unsigned int PWMA_C = 0, PWMB_C = 0; //PWM de curva com ajuste do PID;
 unsigned char sensores_frontais[6];
 
 //Variáveis globais da calibração de sensores
@@ -51,13 +52,13 @@ unsigned char valor_min_abs = 0;
 
 //variáveis de controle
 char f_parada= 0;   //variável que comanda quando o robô deve parar e não realizar mais sua rotina
-char f_calibra = 0; //variável que indica o fim da calibração dos esnores e inicio da estratégia
+char f_calibra = 0; //variável que indica o fim da calibração dos sensores e inicio da estratégia
 char flag = 0;      //variável de controle para identificar o momento de parada
 
 //Variáveis globais da UART
-char buffer[5]; //String que armazena valores de entrada para serem printadas
+/*char buffer[5]; //String que armazena valores de entrada para serem printadas
 volatile char ch; //armazena o caractere lido
-volatile char flag_com = 0; //flag que indica se houve recepção de dado
+volatile char flag_com = 0; //flag que indica se houve recepção de dado*/
 
 /*tempo =65536 * Prescaler/Fosc = 65536 * 1024/16000000 = 4, 19s
  tempo = X_bit_timer * Prescaler/Fosc
@@ -87,19 +88,18 @@ void f_timers (void);       //função de temporização das rotinas
 
 
 /*Interrupções*/
-ISR(USART_RX_vect) {
+/*ISR(USART_RX_vect) {
     ch = UDR0; //Faz a leitura do buffer da serial
 
     UART_enviaCaractere(ch); //Envia o caractere lido para o computador
     //flag_com = 1; //Aciona o flag de comunicação
-}
+}*/
 
 ISR(TIMER0_OVF_vect) 
 {
     TCNT0 = 56; //Recarrega o Timer 0 para que a contagem seja 100us novamente
     
-    f_timers(); //função de temporização das rotinas
-    
+    f_timers(); //função de temporização das rotinas   
 }//end TIMER_0
 
 ISR(ADC_vect)
@@ -108,7 +108,6 @@ ISR(ADC_vect)
 }//end ADC_int
 
 /*============================================================================*/
-
 
 /*Função principal*/
 int main(void) 
@@ -120,7 +119,6 @@ int main(void)
 }//end main
 
 //===Funções não visíveis ao usuário======//
-
 void setup() 
 {
 
@@ -170,21 +168,20 @@ void calibration()
     seta_calibracao(); //estabelece o limiar dos sensores através dos valores da função de cima
     
     clr_bit(PORTB, led);
-    _delay_ms(500);
+    _delay_ms(250);
     set_bit(PORTB, led); //subrotina de acender e apagar o LED 13
-    _delay_ms(1000);
+    _delay_ms(250);
     clr_bit(PORTB, led);
-    _delay_ms(500);
+    _delay_ms(250);
     set_bit(PORTB, led);
-    _delay_ms(500);
+    _delay_ms(250);
     clr_bit(PORTB, led);
-    _delay_ms(2000);
+    _delay_ms(1000);
     f_calibra = 1;  //flag para indicar fim da calibração
 }
 
-void setup_logica(){
-   
-    
+void setup_logica()
+{
     
 }
 
@@ -245,7 +242,7 @@ void ADC_maq ()
             break;
             
         case 5:
-            estado = 6;
+            estado = 0;
             sensores_frontais[5] = ADC_ler();
             ADC_conv_ch(3);
             break;
@@ -331,7 +328,7 @@ void calibra_sensores()
             }
         }
 
-        _delay_ms(10);  //tempo o suficiente para o pessoa calibrar os sensores mecanicamente
+        _delay_ms(20);  //tempo o suficiente para o pessoa calibrar os sensores mecanicamente
         
         /*
         Após isso determinar o limiar de todos os sensores para que eles tenham os mesmos valores do AD. 
@@ -359,7 +356,8 @@ void seta_calibracao() {
     }
 }
 
-void sensores() {
+void sensores() 
+{
 
     //======Estabelece o limiar da leitura dos sensores====//
     //função de correção da calibração
@@ -381,7 +379,6 @@ void sentido_de_giro()
     unsigned char u = 0; //valor de retorno do PID
     static unsigned int PWMR = 400; // valor da força do motor em linha reta
     unsigned char u_curva = 0; //valor de retorno do PID numa curva
-    static unsigned int PWMA_C = 0, PWMB_C = 0; //PWM de curva com ajuste do PID;
     static unsigned int PWM_Curva = 350; //PWM ao entrar na curva
 
     if ((sensores_frontais[0] < 50 && sensores_frontais[5] > 225) || (sensores_frontais[0]  > 225 && sensores_frontais[5] < 50))    
@@ -425,8 +422,18 @@ void PWM_limit() {
 
     if (PWMA > 1023) {
         PWMA = 1000;
-    } 
-    else if (PWMB > 1023) {
+    }
+    
+    if (PWMA_C > 1023)
+    {
+        PWMA_C = 1000;
+    }
+    
+    if (PWMB_C > 1023)
+    {
+        PWMB_C = 1000;
+    }
+    if (PWMB > 1023) {
         PWMB = 1000;
     }
 }
@@ -454,7 +461,7 @@ void calculo_do_erro()
 void estrategia()
 {
     
-    if (!f_parada)  //se f_parada dor 0... 
+    if (!f_parada)  //se f_parada for 0... 
     {
         sensores();             //seta o limiar da leitura dos sensores
         calculo_do_erro();      //faz a média ponderada e calcula o erro
@@ -477,22 +484,33 @@ void fim_de_pista()
     {
         freio();
         f_parada = 1;
+        parada = 0;
     }
 }
 
 void f_timers (void) {
 
-    static unsigned char c_timer2 = 0; //c_timer1 = 0, 
+    static char c_timer1 = 0;
+    static unsigned char c_timer2 = 0; 
     if(f_calibra)
     {
         
         //funções a cada 100us
-        parada();
-        fim_de_pista();         //Verifica se é o fim da pista
-        
-        if (c_timer2 < 3)
+        if(c_timer1 < 0)
         {
-            c_timer2++;
+            c_timer1++;
+        }
+        
+        else
+        {
+            parada();
+            fim_de_pista();         //Verifica se é o fim da pista
+            c_timer1 = 0;
+        }
+        
+        if (c_timer2 < 3)   //o 0 conta na contagem -> 4-1
+        {
+            c_timer2++; //100us -1; 200us-2;300 us-3; 400us de intervalo de tempo
         }
         
         else    //a cada 400us
