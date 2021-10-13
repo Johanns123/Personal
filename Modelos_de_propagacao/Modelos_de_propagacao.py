@@ -216,7 +216,7 @@ def modelo_close_in_reference():
 
 
 def modelo_Okumura_Hata():
-    f  = 850            ##freq em MHz, uinidade em MHz
+    f  = 300 *10**3            ##freq em MHz, uinidade em MHz - 300.000MHz = 300GHz
     d = np.arange(1,20, 0.1); ##até 20Km, unidade em Km
     hb = 100            ##em m
     hm = 2              ##em m
