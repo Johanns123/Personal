@@ -19,8 +19,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include <stdio.h>
-/* Private includes ----------------------------------------------------------*/
+#include <stdio.h>  // sprintf()
+#include <string.h> // tratamento de string/* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
@@ -65,9 +65,8 @@ static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN 0 */
 uint32_t AD[512];	//variável para armazenar os valores do AD
 uint32_t line_sensor[2];
-uint8_t rx_data = 0; //UART de 8 bits
-uint8_t tx_data [15] = {0};
-
+uint8_t rx_data[1] = {0}; //UART de 8 bits
+uint8_t tx_data [100] = {0};
 /* USER CODE END 0 */
 
 /**
@@ -76,149 +75,183 @@ uint8_t tx_data [15] = {0};
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
+	/* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+	/* USER CODE END 1 */
+	int flag = 0;
+	int f_ADC_Start = 0;
+	/* MCU Configuration--------------------------------------------------------*/
 
-  /* MCU Configuration--------------------------------------------------------*/
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* USER CODE BEGIN Init */
 
-  /* USER CODE BEGIN Init */
+	/* USER CODE END Init */
 
-  /* USER CODE END Init */
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* USER CODE BEGIN SysInit */
 
-  /* USER CODE BEGIN SysInit */
+	/* USER CODE END SysInit */
 
-  /* USER CODE END SysInit */
-
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_ADC1_Init();
-  MX_USART1_UART_Init();
-  /* USER CODE BEGIN 2 */
-  HAL_ADC_Start_DMA(&hadc1, AD, 512);	//start o ADC com DMA
-  HAL_UART_Receive_DMA(&huart1, &rx_data, 1);
-  HAL_UART_Transmit_DMA(&huart1, tx_data, sizeof(tx_data));
-  //esse valor é o buffer, onde os valores do AD são armazenados
-  //2 são os valores que serão armazenados == número de canais do AD em uso
-
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_DMA_Init();
+	MX_ADC1_Init();
+	MX_USART1_UART_Init();
+	/* USER CODE BEGIN 2 */
+	HAL_ADC_Start_DMA(&hadc1, AD, 512);	//start o ADC com DMA
+	//esse valor é o buffer, onde os valores do AD são armazenados
+	//2 são os valores que serão armazenados == número de canais do AD em uso ou mútiplos
+	HAL_UART_Receive_DMA(&huart1, rx_data, 1);
+	//HAL_UART_Transmit_DMA(&huart1, tx_data, 11);
 
 
-	  /*if(line_sensor[1] > 1023)
-	  {
+	/* USER CODE END 2 */
+	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);	//apaga led
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
+	while (1)
+	{
+
+		//UART com RX por DMA e TX por pooling
+		HAL_UART_Receive_DMA(&huart1, rx_data, 1);
+		// Caso tenha recebido um dado, inverte o estado dos LEDs.
+		if(rx_data[0] != 0){
+			switch(rx_data[0]){
+				case '1':
+					HAL_UART_Transmit(&huart1, rx_data, 1, 1);
+					HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);	//acende led da placa
+					HAL_Delay(500);
+					HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
+					HAL_Delay(500);
+					HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);	//acende led da placa
+					HAL_Delay(500);
+					HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
+					HAL_Delay(500);
+					f_ADC_Start = 1;
+					flag = 0;
+					rx_data[0] = 0;                                               // Zera caractere recebido
+					break;
+				case '2':
+					HAL_UART_Transmit(&huart1, rx_data, 1, 1);
+					HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);	//acende led da placa
+					HAL_Delay(200);
+					HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
+					HAL_Delay(200);
+					HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);	//acende led da placa
+					HAL_Delay(200);
+					HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
+					HAL_Delay(200);
+					f_ADC_Start = 0;
+					flag = 0;
+					rx_data[0] = 0; 												 // Zera caractere recebido
+					break;
+				case '3':
+					HAL_UART_Transmit(&huart1, rx_data, 1, 1);
+					HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);	//acende led da placa
+					HAL_Delay(100);
+					HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
+					HAL_Delay(100);
+					HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);	//acende led da placa
+					HAL_Delay(100);
+					HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
+					HAL_Delay(100);
+					f_ADC_Start = 0;
+					flag = 0;
+					rx_data[0] = 0; 												 // Zera caractere recebido
+				break;
+			}
+
+		}
+
+
+		// Envia pela serial o caractere para limpar a tela do terminal
+		if(!flag)
+		{
+
+			// Atualiza tela do terminal com os valores
+			sprintf((char *)tx_data,
+				"\nEstados dos LEDS:\n\r1 - Led Azul    : \n\r2 - Led Verde   : \n\r3 - Led Amarelo : \n\r");
+
+			// Envia pela serial texto atualizado
+			HAL_UART_Transmit(&huart1, tx_data, strlen((const char *)tx_data), 500);
+			flag = 1;
+		}
+
+
+		if(f_ADC_Start)
+		{
+			for(int i = 0; i < 2; i++)
+			{
+				sprintf((char*)tx_data, "%d\t", (int)line_sensor[i]);
+				HAL_UART_Transmit(&huart1, tx_data, 5, 2);
+			}
+			sprintf((char*)tx_data, "\n");
+			HAL_UART_Transmit(&huart1, tx_data, 1, 1);
+		}
+
+		/*if(line_sensor[1] > 1023)
+		{
 		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 0);	//acende led da placa
-	  }
+		}
 
-	  else if(line_sensor[1] < 1023)
-	  {
+		else if(line_sensor[1] < 1023)
+		{
 		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 1);	//apaga led da placa
-	  }
+		}
 
-	  if(line_sensor[0] > 1023)
-	  {
+		if(line_sensor[0] > 1023)
+		{
 		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 1);
-	  }
+		}
 
-	  else
-	  {
+		else
+		{
 		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 0);
-	  }*/
-
-	  switch(rx_data)
-	  {
-		  case '1':
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);	//acende led da placa
-			HAL_Delay(500);
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
-			HAL_Delay(500);
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);	//acende led da placa
-			HAL_Delay(500);
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
-			HAL_Delay(500);
-			break;
-
-		  case '2':
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);	//acende led da placa
-			HAL_Delay(200);
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
-			HAL_Delay(200);
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);	//acende led da placa
-			HAL_Delay(200);
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
-			HAL_Delay(200);
-			break;
-
-		  case '3':
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);	//acende led da placa
-			HAL_Delay(100);
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
-			HAL_Delay(100);
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);	//acende led da placa
-			HAL_Delay(100);
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
-			HAL_Delay(100);
-			break;
-
-	  }
-
-
-
-	 sprintf((char*)tx_data, "%d\n", (int)line_sensor[1] >> 4);
+		}*/
 
 
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
+	}
   /* USER CODE END 3 */
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-   uint32_t val[2] = { 0 };
+	uint32_t val[2] = { 0 };
 
-   for (int i = 0; i < 2; i++) {
-       val[i] = 0;
-   }
+	for (int i = 0; i < 2; i++) {
+	   val[i] = 0;
+	}
 
-   for (int i = 0; i < 512 / 2; i++) {
-       for (int j = 0; j < 2; j++) {
-           val[j] += AD[2*i + j];
-       }
-   }
+	for (int i = 0; i < 512 / 2; i++) {
+	   for (int j = 0; j < 2; j++) {
+		   val[j] += AD[2*i + j];
+	   }
+	}
 
-   for (int i = 0; i < 2; i++) {
-       val[i] /= 512 / 2;
-   }
+	for (int i = 0; i < 2; i++) {
+	   val[i] /= 512 / 2;
+	}
 
-   for (int i = 0; i < 2; i++) {
-       line_sensor[i] = val[i];
-   }
+	for (int i = 0; i < 2; i++) {
+	   line_sensor[i] = val[i];
+	}
 }
 
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+/*void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
 
-	HAL_UART_Transmit_DMA(&huart1, tx_data, sizeof(tx_data));
 
-}
+}*/
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+/*void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	HAL_UART_Receive_DMA(&huart1, &rx_data, 1);
-
-}
+}*/
 
 /**
   * @brief System Clock Configuration
