@@ -65,7 +65,7 @@ uint8_t rx_data[1] = {0}; //UART de 8 bits
 uint8_t tx_data [100] = {0};
 int f_button = 0;
 /* USER CODE END 0 */
-void f_timers();
+void f_timers(void);
 /**
   * @brief  The application entry point.
   * @retval int
@@ -98,13 +98,17 @@ int main(void)
   MX_ADC1_Init();
   MX_USART1_UART_Init();
   MX_TIM2_Init();
+  MX_TIM1_Init();
+  HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
   /* USER CODE BEGIN 2 */
 	HAL_ADC_Start_DMA(&hadc1, AD, 512);	//start o ADC com DMA
 	//esse valor é o buffer, onde os valores do AD são armazenados
 	//2 são os valores que serão armazenados == número de canais do AD em uso ou mútiplos
 	HAL_UART_Receive_DMA(&huart1, rx_data, 1);
 	//HAL_UART_Transmit_DMA(&huart1, tx_data, 11);
-
+	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
    int f_ADC_Start = 0, flag = 0;
   /* USER CODE END 2 */
 
@@ -114,7 +118,7 @@ int main(void)
 	{
 
 		//UART com RX por DMA e TX por pooling
-		/*HAL_UART_Receive_DMA(&huart1, rx_data, 1);
+		HAL_UART_Receive_DMA(&huart1, rx_data, 1);
 		// Caso tenha recebido um dado, inverte o estado dos LEDs.
 		if(rx_data[0] != 0){
 			switch(rx_data[0]){
@@ -190,6 +194,14 @@ int main(void)
 			HAL_UART_Transmit(&huart1, tx_data, 1, 1);
 		}
 
+		for(int i = 0; i < 10000 - 1; i+=100)
+		{
+			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, i);	//PWM de 100Hz
+			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, i);
+			HAL_Delay(1);
+		}
+
+
 		/*if(line_sensor[1] > 1023)
 		{
 		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 0);	//acende led da placa
@@ -223,9 +235,10 @@ int main(void)
   * @retval None
   */
 
+
 //botões por interrupção
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-    /*int flag_bot = 0, flag_bot2 = 0;
+    int flag_bot = 0, flag_bot2 = 0;
 
     if(GPIO_Pin == Botao2_Pin)
     {
@@ -258,7 +271,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     }
 
 
-    else;*/
+    else;
 }
 
 
@@ -286,34 +299,50 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    /*if (htim == &htim2)
+	//esse if entra no timer2
+    if (htim == &htim2)
     {
-        f_timers();
-    }*/
-	if (htim->Instance == TIM2)
+        f_timers();	//função com os timers de cada rotina
+    }
+
+	//e este também entra no timer2
+	/*if (htim->Instance == TIM2)
 	{
-		f_timers();
-	}
+		//f_timers();
+	}*/
+
 
 }
 
 void f_timers(void)
 {
-	int count_1 = 0;
+	static int count_1 = 0, count_1_ms = 0;
 
-	if(count_1 < 5000-1)
+	if(count_1 < 10-1)
 	{
 		count_1++;
 	}
 
 	else
 	{
-		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+		if(count_1_ms < 500 - 1)
+		{
+			count_1_ms++;
+		}
+		else
+		{
+			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+			count_1_ms = 0;
+		}
 		count_1 = 0;
 	}
 
 }
 
+/**
+  * @brief System Clock Configuration
+  * @retval None
+  */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
