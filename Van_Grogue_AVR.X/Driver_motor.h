@@ -1,9 +1,3 @@
-#define set_bit(y,bit) (y|=(1<<bit)) //coloca em 1 o bit x da variável Y
-#define clr_bit(y,bit) (y&=~(1<<bit)) //coloca em 0 o bit x da variável Y
-#define cpl_bit(y,bit) (y^=(1<<bit)) //troca o estado lógico do bit x da variável Y
-#define tst_bit(y,bit) (y&(1<<bit)) //retorna 0 ou 1 conforme leitura do bit
-
-
 //Lado direito
 #define AIN2 PD6
 #define AIN1 PD5 // Quando em HIGH, roda direita anda para frente 
@@ -61,7 +55,7 @@ void freio() {
 
     _delay_ms(60000);*/
     
-    motor_off();        //desliga os motores para deoxar o próprio atrito frear o robô
+    motor_off();        //desliga os motores para deoxar o prï¿½prio atrito frear o robï¿½
     setDuty_1(0);
     setDuty_2(0);
 }
