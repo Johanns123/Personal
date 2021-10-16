@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "PID.h"
-//#include "fatfs_sd.h"	//biblioteca de manipulação do cartão sd
+#include "fatfs_sd.h"	//biblioteca de manipulação do cartão sd
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
@@ -46,7 +46,7 @@ uint8_t tx_data [100] = {0};
 int f_button = 0;//botão de inicialização da rotina, ainda a ser implementado
 
 /*Variáveis de manipulação de arquivos*/
-/*FATFS 		 fs;  //file system
+FATFS 		 fs;  //file system
 FIL 		fil;  //file
 FRESULT fresult;  //to store the result
 char buffer[1024];//to store data
@@ -54,9 +54,9 @@ char buffer[1024];//to store data
 UINT br, bw;	  //file read/write count
 
 /*Capacity related variables*/
-/*FATFS 		 *pfs;
+FATFS 		 *pfs;
 DWORD	fre_clust;
-uint32_t total, free_space;*/
+uint32_t total, free_space;
 
 
 /* Private function prototypes -----------------------------------------------*/
