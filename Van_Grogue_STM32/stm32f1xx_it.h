@@ -17,6 +17,7 @@
  ******************************************************************************
   */
 /* USER CODE END Header */
+//Modified for use of SD Card
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __STM32F1xx_IT_H
