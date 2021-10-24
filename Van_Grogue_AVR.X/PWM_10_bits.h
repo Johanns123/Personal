@@ -14,7 +14,8 @@ void setDuty_1(int duty) //MotorA
 
 } //end setDuty
 
-void setFreq(char option) {
+void setFreq(char option) 
+{
     /*
     TABLE:
   	//no fast Mode
