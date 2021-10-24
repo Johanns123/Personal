@@ -6,12 +6,48 @@
 #define BIN1 PD4 
 #define BIN2 PD3 // Quando em HIGH, roda esquerda anda para frente
 
-void frente() {
+extern void setDuty_1(int duty);
+extern void setDuty_2(int duty);
+
+void frente() 
+{
 
     set_bit(PORTD, AIN1); //frente direita
     clr_bit(PORTD, AIN2);
     set_bit(PORTD, BIN2); //frente esquerda
     clr_bit(PORTD, BIN1);
+}
+
+void direita_frente()  //direita sentido direto
+{
+    set_bit(PORTD, AIN1); //frente direita
+    clr_bit(PORTD, AIN2);
+    clr_bit(PORTD, BIN2);
+    clr_bit(PORTD, BIN1);
+}
+
+void direita_tras()  //direita sentido reverso
+{
+    clr_bit(PORTD, AIN1); //frente direita
+    set_bit(PORTD, AIN2);
+    clr_bit(PORTD, BIN2);
+    clr_bit(PORTD, BIN1);
+}
+
+void esquerda_frente()  //esquerda sentido direto
+{
+    clr_bit(PORTD, AIN1); 
+    clr_bit(PORTD, AIN2);
+    set_bit(PORTD, BIN2);//frente esquerda
+    clr_bit(PORTD, BIN1);
+}
+
+void esquerda_tras()  //esquerda sentido reverso
+{
+    clr_bit(PORTD, AIN1); 
+    clr_bit(PORTD, AIN2);
+    clr_bit(PORTD, BIN2);//frente esquerda
+    set_bit(PORTD, BIN1);
 }
 
 void tras() {
