@@ -8,45 +8,26 @@
 
 /*Este código é de um robô seguidor de linha da equipe Wolfbotz.
  * Aqui nós vemos o controle do robô bem como as tomadas de decisão de acordo com os padrões da pista*/
-
-/*Bibliotecas e frequência do uc*/
-#define F_CPU 16000000        //define a frequencia do uC para 16MHz
-#include <avr/io.h>           //Biblioteca geral dos AVR
-#include <avr/interrupt.h>    //Biblioteca de interrupção
-#include <util/delay.h>       //Biblioteca geradora de atraso
-//#include <stdio.h>            //Bilioteca do C
-//#include "UART.h"             //Biblioteca da comunicação UART
+#include "HAL_atmega328p.h"
+#include <stdio.h>            //Bilioteca do C
+#include "UART.h"             //Biblioteca da comunicação UART
 #include "ADC.h"              //Biblioteca do conversor AD
 #include "PWM_10_bits.h"      //Biblioteca de PWM fast mode de 10 bits
 #include "Driver_motor.h"     //Biblioteca das funções de controle dos motores  //usado para ponte H tb6612fng
 #include "PID.h"              //Biblioteca do controle PID
 /*============================================================*/
 
-//variáveis de comando para os registradores
-#define set_bit(y,bit) (y|=(1<<bit)) //coloca em 1 o bit x da variável Y
-#define clr_bit(y,bit) (y&=~(1<<bit)) //coloca em 0 o bit x da variável Y
-#define cpl_bit(y,bit) (y^=(1<<bit)) //troca o estado lógico do bit x da variável Y
-#define tst_bit(y,bit) (y&(1<<bit)) //retorna 0 ou 1 conforme leitura do bit
-/*==============================================================*/
-
-/*Mapeamento de Hardware*/
-#define sensor_de_curva   PB0
-#define sensor_de_parada  PD7
-#define led               PB5
-#define leitura_curva    PINB
-#define leitura_parada   PIND
-
 /*==============================================================*/
 
 /*Variáveis globais*/
-char erro = 0;      //variável para cáculo do erro da direção do robô em cima da linha
+int erro = 0;      //variável para cáculo do erro da direção do robô em cima da linha
 unsigned int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
 unsigned int PWMA_C = 0, PWMB_C = 0; //PWM de curva com ajuste do PID;
-unsigned char sensores_frontais[6];
+unsigned char sensores_frontais[5];
 
 //Variáveis globais da calibração de sensores
-unsigned char valor_max[6] = {0, 0, 0, 0, 0, 0};
-unsigned char valor_min[6] = {255, 255, 255, 255, 255, 255};
+unsigned char valor_max[5] = {0, 0, 0, 0, 0};
+unsigned char valor_min[5] = {255, 255, 255, 255, 255};
 unsigned char valor_max_abs = 255;
 unsigned char valor_min_abs = 0;
 
@@ -54,7 +35,11 @@ unsigned char valor_min_abs = 0;
 char f_parada= 0;   //variável que comanda quando o robô deve parar e não realizar mais sua rotina
 char f_calibra = 0; //variável que indica o fim da calibração dos sensores e inicio da estratégia
 char flag = 0;      //variável de controle para identificar o momento de parada
+char flag_com = 0;
+char f_motor = 0;   //variável de controle da calibração automática
 
+volatile char ch; //armazena o caractere lido
+char buffer[5]; //String que armazena valores de entrada para serem printadas
 //Variáveis globais da UART
 /*char buffer[5]; //String que armazena valores de entrada para serem printadas
 volatile char ch; //armazena o caractere lido
@@ -68,14 +53,11 @@ volatile char flag_com = 0; //flag que indica se houve recepção de dado*/
 
 /*Protótipo das funções*/
 void ADC_maq();             //máquina de estado do conversor AD
-void INT_INIT();            //Inicializador das interrupções (Timer0)
-//void entrou_na_curva(char valor_erro);
 void parada();              //Leitura dos sensores laterais
 void calibra_sensores();    //calibra sensores manualmente 
 void seta_calibracao();     //estabelece o limiar dos valores máximos e mínimos de leitura
 void sensores();            //caso um sensor passe do valor, o mesmo é corrigido
 void setup();
-void setup_Hardware();      //define os registradores
 void setup_logica();
 void loop();
 void sentido_de_giro();     //lê os sensores frontais e determina o sentido de giro dos motores com o PID
@@ -84,16 +66,16 @@ void estrategia();          //estrategia do robô
 void calibration();         //contêm toda a rotina de calibração
 void fim_de_pista();        //verifica se é o fim da psita
 void f_timers (void);       //função de temporização das rotinas
+void Auto_calibration(void);
 /*===========================================================================*/
 
-
 /*Interrupções*/
-/*ISR(USART_RX_vect) {
+ISR(USART_RX_vect) {
     ch = UDR0; //Faz a leitura do buffer da serial
 
     UART_enviaCaractere(ch); //Envia o caractere lido para o computador
-    //flag_com = 1; //Aciona o flag de comunicação
-}*/
+    flag_com = 1; //Aciona o flag de comunicação
+}
 
 ISR(TIMER0_OVF_vect) 
 {
@@ -106,8 +88,6 @@ ISR(ADC_vect)
 {
     ADC_maq();  //máquina de estado do conversor AD
 }//end ADC_int
-
-/*============================================================================*/
 
 /*Função principal*/
 int main(void) 
@@ -123,37 +103,12 @@ void setup()
 {
 
     setup_Hardware();   //setup das IO's e das interrupções
+    sei();              //Habilita as interrupções
     calibration();      //rotina de calibração
     setup_logica();     //definição das variáveis lógicas(vazio por enquanto)
-    sei();              //Habilita as interrupções
 
 }//end setup
 
-
-void setup_Hardware()
-{
-    MCUCR &= 0xef;      //habilita pull up quando configurado e desabilita algumas configurações prévias do MCU
-
-    DDRD = 0b01111010; //PD3 - PD6 definidos como saída, PD7 como entrada, PD0 como entrada(RX) e PD1 como saída(TX)
-    PORTD = 0b10000000; //inicializados em nível baixo e PD7 com pull up
-    DDRB = 0b00100110; //Habilita PB0 como entrada e PB5, PB1 e PB2 como saída
-    PORTB = 0b00000001; //PORTB inicializa desligado e pull up no PB0
-    DDRC = 0b00000000; //PORTC como entrada
-    PORTC = 0b00001111; //PC3 - PC0 com pull up (colocar resistor de pull up nos pinos A6 e A7)
-    TCCR1A = 0xA2; //Configura operação em fast PWM, utilizando registradores OCR1x para comparação
-    //TCCR1A = 0xA3 //Configura em phase correct PWM OC1A e OC1B limpos
-    
-    //esquerdo pino 4 - PD2
-    //UART_config(16); //Inicializa a comunicação UART com 57.6kbps
-    
-    setFreq(4); //Seleciona opção para frequência
-    //62,5Hz de PWM
-    
-    ADC_init(); //Inicializa o AD
-    INT_INIT(); //Inicializa o Timer0
-
-    
-}//end setup_hardware
 
 void calibration()
 {
@@ -177,6 +132,13 @@ void calibration()
     _delay_ms(250);
     clr_bit(PORTB, led);
     _delay_ms(1000);
+    
+    /*if(f_motor) //para o robô para iniciar a rotina
+    {
+        motor_off();
+        setDuty_1(0);
+        setDuty_2(0);
+    }*/
     f_calibra = 1;  //flag para indicar fim da calibração
 }
 
@@ -185,12 +147,6 @@ void setup_logica()
     
 }
 
-void INT_INIT()
-{    //fórmula nas primeiras linhas do código
-    TCCR0B = 0b00000010; //TC0 com prescaler de 8
-    TCNT0 = 56; //Inicia a contagem em 56 para, no final, gerar 100us
-    TIMSK0 = 0b00000001; //habilita a interrupção do TC0
-}
 
 void loop()//loop vazio
 {
@@ -214,42 +170,37 @@ void ADC_maq ()
         case 0:
             estado = 1;
             sensores_frontais[0] = ADC_ler();
-            ADC_conv_ch(2);
+            ADC_conv_ch(1);
             break;
             
         case 1:
             estado = 2;
             sensores_frontais[1] = ADC_ler();
-            ADC_conv_ch(1);
+            ADC_conv_ch(0);
             break;
             
         case 2:
             estado = 3;
             sensores_frontais[2] = ADC_ler();
-            ADC_conv_ch(0);
+            ADC_conv_ch(7);
             break;
             
         case 3:
             estado = 4;
             sensores_frontais[3] = ADC_ler();
-            ADC_conv_ch(7);
-            break;
-            
-        case 4:
-            estado = 5;
-            sensores_frontais[4] = ADC_ler();
             ADC_conv_ch(6);
             break;
             
-        case 5:
+        case 4:
             estado = 0;
-            sensores_frontais[5] = ADC_ler();
-            ADC_conv_ch(3);
+            sensores_frontais[4] = ADC_ler();
+            ADC_conv_ch(2);
             break;
+            
             
         default:
             estado = 0;
-            ADC_conv_ch(3);
+            ADC_conv_ch(2);
             sensores_frontais[0] = ADC_ler();
             break; 
     }
@@ -257,45 +208,8 @@ void ADC_maq ()
 }//end ADC_maq
 
 //=========Funções visíveis ao usuário===========//
-//Função só útil após o mapeamneto
-/*void entrou_na_curva(int valor_erro) {
-    int u_curva = 0;
-    static unsigned int PWMA_C = 0, PWMB_C = 0, entrou = 0; //PWM de curva com ajuste do PID;
-    static unsigned int PWM_Curva = 350; //PWM ao entrar na curva
-
-    if ((!tst_bit(leitura_curva, sensor_de_curva)) && tst_bit(leitura_parada, sensor_de_parada))
-        //li branco no sensor de curva e li preto no sensor de parada
-    {
-        switch (entrou) {
-            case 0: //entrou na curva
-                u_curva = PID(valor_erro);
-                PWMA_C = PWM_Curva - u_curva;
-                PWMB_C = PWM_Curva + u_curva;
-                frente();
-                setDuty_1(PWMA_C);
-                setDuty_2(PWMB_C);
-                entrou = 1;
-                break;
-
-            case 1:
-                entrou = 0;
-                frente();
-                setDuty_1(PWMA); //témino da curva
-                setDuty_2(PWMB);
-                clr_bit(PORTB, led);
-                break;
-        }
-    }
-}*/
-
 void parada() 
 {   
-    //leitura de marcador de curva
-    /*static char contador = 0, num_curva = 6;
-    if ((!tst_bit(leitura_curva, sensor_de_curva)) && (tst_bit(leitura_parada, sensor_de_parada)))
-    {
-        contador++;
-    }*/
     
     //cruzamento
     //branco = 0, preto = 1
@@ -319,7 +233,7 @@ void calibra_sensores()
 {
     //=====Função que inicializa a calibração====//
     for (int i = 0; i < 120; i++) {
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 5; i++) {
             if (sensores_frontais[i] < valor_min [i]) {
                 valor_min[i] = sensores_frontais[i];
             }
@@ -328,7 +242,7 @@ void calibra_sensores()
             }
         }
 
-        _delay_ms(20);  //tempo o suficiente para o pessoa calibrar os sensores mecanicamente
+        //_delay_ms(20);  //tempo o suficiente para o pessoa calibrar os sensores mecanicamente
         
         /*
         Após isso determinar o limiar de todos os sensores para que eles tenham os mesmos valores do AD. 
@@ -343,8 +257,8 @@ void seta_calibracao() {
 
     //função que seta o limiar dos sensores
     //Este é o algoritmo a ser usado no robô. Desmcomente antes de compilar e comente o outro.
-    for (int i = 0; i < 6; i++) {
-        if (valor_min [i] > valor_min_abs)// && valor_min[i] !=0 ) //esse !0 foi colocado pois estava havendo um bug ao simular
+    /*for (int i = 0; i < 5; i++) {
+        if (valor_min [i] > valor_min_abs && valor_min[i] !=0 ) //esse !0 foi colocado pois estava havendo um bug ao simular
         {
             valor_min_abs = valor_min [i];
         } 
@@ -352,8 +266,11 @@ void seta_calibracao() {
         if (valor_max [i] < valor_max_abs) {
             valor_max_abs = valor_max [i];
         }
+        
 
-    }
+    }*/
+    valor_min_abs = 70; //valores vistos pelo monitor serial
+    valor_max_abs = 200;
 }
 
 void sensores() 
@@ -361,57 +278,102 @@ void sensores()
 
     //======Estabelece o limiar da leitura dos sensores====//
     //função de correção da calibração
-    for (int i = 0; i < 6; i++) {
-        if (sensores_frontais[i] < valor_min_abs) {
+    for (int i = 0; i < 5; i++)
+    {
+        if (sensores_frontais[i] < valor_min_abs) 
+        {
             sensores_frontais[i] = valor_min_abs;
         }
-        if (sensores_frontais[i] > valor_max_abs) {
+        if (sensores_frontais[i] > valor_max_abs)
+        {
             sensores_frontais[i] = valor_max_abs;
         }
 
     }
+    
 }
 
+void Auto_calibration(void)
+{
+    static unsigned char flag_D = 0, flag_E = 0;
+    /*Calibração automática
+     Robô gira um dos motores num sentido
+    *num intervalo de tempo e depois mudar o sentido de giro.
+    *Em seguida fazer o mesmo com a outra roda.*/
+    
+    if(!flag_D)
+    {
+        direita_frente();
+        setDuty_1(300);
+        setDuty_2(0);
+        flag_D = 1;
+    }
+    
+    else if(flag_D)
+    {
+        direita_tras();
+        setDuty_1(300);
+        setDuty_2(0);
+        flag_E = 1;
+    }
+    
+    else if(flag_E)
+    {
+        esquerda_frente();
+        setDuty_1(0);
+        setDuty_2(300);
+        flag_E = 0;
+    }
+    
+    else if(!flag_E)
+    {
+        esquerda_tras();
+        setDuty_1(0);
+        setDuty_2(300);
+        f_motor = 1;
+    }
+}
 
 void sentido_de_giro()
 {
     //-----> Área do senstido de giro
     unsigned char u = 0; //valor de retorno do PID
-    static unsigned int PWMR = 400; // valor da força do motor em linha reta
+    static unsigned int PWMR = 60; // valor da força do motor em linha reta
     unsigned char u_curva = 0; //valor de retorno do PID numa curva
-    static unsigned int PWM_Curva = 350; //PWM ao entrar na curva
+    static unsigned int PWM_Curva = 50; //PWM ao entrar na curva
 
-    if ((sensores_frontais[0] < 50 && sensores_frontais[5] > 225) || (sensores_frontais[0]  > 225 && sensores_frontais[5] < 50))    
+    if ((sensores_frontais[0] < 116 && sensores_frontais[4] > 196) || (sensores_frontais[0]  > 196 && sensores_frontais[4] < 109))    
+        //Valores vistos na serial
         //se o primeiro sensor ou o último sensor estiverem lendo branco...
         //necessário teste com monitor serial
         //estudar a melhor quantidade de sensores e seu espaçamento
     {
         u_curva = PID(erro);
-        PWMA_C = PWM_Curva - u_curva;
-        PWMB_C = PWM_Curva + u_curva;
+        PWMA_C = PWM_Curva + u_curva;
+        PWMB_C = PWM_Curva - u_curva;
         frente();
         PWM_limit();
         setDuty_1(PWMA_C);
         setDuty_2(PWMB_C);
-        //flag1 = 1;
     } //em cima da linha
         
     else
     { 
         //pra frente - reta
-        //flag1 = 0x00;
         //--------------->AREA DO PID<---------------
 
         u = PID(erro);
 
-        PWMA = PWMR - u;
-        PWMB = PWMR + u;
+        PWMA = PWMR + u;
+        PWMB = PWMR - u;
 
         frente();
         PWM_limit();
         setDuty_1(PWMA);
         setDuty_2(PWMB);
     }
+    
+    
 
     //A função que fazia o robô rodar em seu próprio eixo foi removida
 
@@ -440,22 +402,32 @@ void PWM_limit() {
 
 void calculo_do_erro()
 {
-    unsigned int soma_direito = 0, denominador_direito = 6, denominador_esquerdo = 6;
-    int soma_esquerdo = 0;
-    char soma_total = 0;   //caso aumente o peso da média_ponderada, tomar cuidado com a variável char
+    int soma_esquerdo = 0, soma_direito = 0;
+    int denominador = 6;
+    int soma_total = 0;   //caso aumente o peso da média_ponderada, tomar cuidado com a variável char
     
-    static char peso [] = {-3, -2, -1, 1, 2, 3}; //utilizando um prescale de 2000
+    static int peso [] = {-2, -1, 0, 1, 2};
     //os pesos precisarão ser corrigidos pois os sensores do Van Grogue estão um pouco assimétricos
     
-    for (int j = 0; j < 3; j++) 
+    for (int j = 0; j < 2; j++) 
     {
         soma_esquerdo += (sensores_frontais[j] * peso[j]);
-        soma_direito += (sensores_frontais[5-j] * peso[5 - j]);
+        soma_direito  += (sensores_frontais[4-j] * peso[4-j]);
     }
 
-    soma_total = (soma_esquerdo + soma_direito) / (denominador_esquerdo + denominador_direito);
+    soma_total = (soma_esquerdo + soma_direito)/ denominador;
     
-    erro = 0 - soma_total;   //valor esperado(estar sempre em cima da linha) - valor medido
+    erro = 16 - soma_total;   //valor esperado(estar sempre em cima da linha) - valor medido
+
+    /*for(int i = 0; i < 5; i++)
+    {
+        sprintf(buffer, "%d\t", sensores_frontais[i]);
+        UART_enviaString(buffer);
+    }
+    UART_enviaCaractere('\n');*/
+    
+    sprintf(buffer, "%d\n", erro);
+    UART_enviaString(buffer);
 }
 
 void estrategia()
@@ -490,13 +462,14 @@ void fim_de_pista()
 
 void f_timers (void) {
 
-    static char c_timer1 = 0;
-    static unsigned char c_timer2 = 0; 
+    static unsigned char c_timer1 = 0;
+    static unsigned char c_timer2 = 0;
+    //static unsigned char c_timer3_ms = 0, c_timer3 = 0;
     if(f_calibra)
     {
         
         //funções a cada 100us
-        if(c_timer1 < 0)
+        if(c_timer1 < 1-1)
         {
             c_timer1++;
         }
@@ -508,7 +481,7 @@ void f_timers (void) {
             c_timer1 = 0;
         }
         
-        if (c_timer2 < 3)   //o 0 conta na contagem -> 4-1
+        if (c_timer2 < 4-1)   //o 0 conta na contagem -> 4-1
         {
             c_timer2++; //100us -1; 200us-2;300 us-3; 400us de intervalo de tempo
         }
@@ -518,5 +491,45 @@ void f_timers (void) {
             estrategia();
             c_timer2=0;
         }
+        
+    }
+    
+    else
+    {
+        /**if(c_timer3_ms < 100 - 1)   //10ms
+        {
+            c_timer3_ms++;
+        }
+        
+        else
+        {
+            if(c_timer3 < 200 - 1)  //2000ms = 2s
+            {
+                c_timer3++;
+            }
+            
+            else 
+            {   
+                if(!f_motor)
+                {
+                    Auto_calibration();
+                }
+                c_timer3 = 0;
+            }
+            c_timer3_ms = 0;
+        }*/
+        
     }
 }//fim do programa
+
+/*Observações:
+  Foram utilizados somente 5 sensores pois o módulo está assimétrico em relação ao robô, e
+ *a forma mais simples de corrigir isso é usando os 5 sensores,
+  mesmo não estando 100% simétrico.
+  Por causa disso foi necessário alterar o setpoint do erro para termos um erro = 0
+  quando o robô estivesse acima da linha.
+  Foi visto também pela serial o limite superior e inferior dos sensores e foram
+  setados em valor_max_abs e valor_min_abs pois a calibração não estava funcionando
+  Além disso foi feito uma leitura serial dos sensores em uma curva,
+  virando tanto pra esquerda quanto para a direita para saber os valores AD
+  dos sensores extremos em cada situação para se iniciar uma curva*/
