@@ -89,7 +89,7 @@ int main(){
 
         numeracao_dos_dias(i);
 
-        if(quarta < sabado || mes < mes2)
+        if(quarta < sabado && mes < mes2)
         {
             fprintf(file, "%2d/%2d/%d,", quarta, mes, ano);
             retorno = 0;
