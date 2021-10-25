@@ -24,6 +24,7 @@ int erro = 0;      //variável para cáculo do erro da direção do robô em cima da 
 unsigned int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
 unsigned int PWMA_C = 0, PWMB_C = 0; //PWM de curva com ajuste do PID;
 unsigned char sensores_frontais[5];
+unsigned int PWMR = 70; // valor da força do motor em linha reta
 
 //Variáveis globais da calibração de sensores
 unsigned char valor_max[5] = {0, 0, 0, 0, 0};
@@ -67,6 +68,7 @@ void calibration();         //contêm toda a rotina de calibração
 void fim_de_pista();        //verifica se é o fim da psita
 void f_timers (void);       //função de temporização das rotinas
 void Auto_calibration(void);
+void volta_pra_pista(void);
 /*===========================================================================*/
 
 /*Interrupções*/
@@ -210,22 +212,34 @@ void ADC_maq ()
 //=========Funções visíveis ao usuário===========//
 void parada() 
 {   
-    
     //cruzamento
     //branco = 0, preto = 1
-    if ((!tst_bit(leitura_curva, sensor_de_curva)) && (!tst_bit(leitura_parada, sensor_de_parada))) //verifica se é crizamento
-    {
-        /*frente();
-        setDuty_1(PWMA);
-        setDuty_2(PWMB);*/
-        flag = 0;
-    }
+    static unsigned char flag_count = 0;
     
     //leitura de marcador de parada
-    else if ((tst_bit(leitura_curva, sensor_de_curva)) && (!tst_bit(leitura_parada, sensor_de_parada)))
+    if ((tst_bit(leitura_curva, sensor_de_curva)) && (!tst_bit(leitura_parada, sensor_de_parada)) && !flag_count)
     {
         flag = 1;
+        flag_count = 1;
     }
+    
+    else if ((!tst_bit(leitura_curva, sensor_de_curva)) && (!tst_bit(leitura_parada, sensor_de_parada)) && flag_count) //verifica se é crizamento
+    {
+        flag = 0;
+        flag_count = 1;
+    }
+    
+    else if ((tst_bit(leitura_curva, sensor_de_curva)) && (tst_bit(leitura_parada, sensor_de_parada)) && flag_count)
+    {
+        flag = 0;
+        flag_count = 0;
+    }
+    else if (!(tst_bit(leitura_curva, sensor_de_curva)) && (tst_bit(leitura_parada, sensor_de_parada)) && flag_count)
+    {
+        flag = 0;
+        flag_count = 0;
+    }
+
 
 }
 
@@ -337,9 +351,8 @@ void Auto_calibration(void)
 void sentido_de_giro()
 {
     //-----> Área do senstido de giro
-    unsigned char u = 0; //valor de retorno do PID
-    static unsigned int PWMR = 60; // valor da força do motor em linha reta
-    unsigned char u_curva = 0; //valor de retorno do PID numa curva
+    static int u = 0; //valor de retorno do PID
+    static int u_curva = 0; //valor de retorno do PID numa curva
     static unsigned int PWM_Curva = 50; //PWM ao entrar na curva
 
     if ((sensores_frontais[0] < 116 && sensores_frontais[4] > 196) || (sensores_frontais[0]  > 196 && sensores_frontais[4] < 109))    
@@ -373,8 +386,10 @@ void sentido_de_giro()
         setDuty_2(PWMB);
     }
     
+    volta_pra_pista();
     
-
+    //sprintf(buffer, "%d\n", u);
+    //UART_enviaString(buffer);
     //A função que fazia o robô rodar em seu próprio eixo foi removida
 
 }
@@ -382,28 +397,59 @@ void sentido_de_giro()
 void PWM_limit() {
     //------> Limitando PWM
 
-    if (PWMA > 1023) {
-        PWMA = 1000;
+    if (PWMA > 120) {
+        PWMA = 120;
     }
     
-    if (PWMA_C > 1023)
+    if (PWMA_C > 80)
     {
-        PWMA_C = 1000;
+        PWMA_C = 80;
     }
     
-    if (PWMB_C > 1023)
+    if (PWMB_C > 80)
     {
-        PWMB_C = 1000;
+        PWMB_C = 80;
     }
-    if (PWMB > 1023) {
-        PWMB = 1000;
+    if (PWMB > 120) {
+        PWMB = 120;
     }
+}
+void volta_pra_pista(void)
+{
+    if ((sensores_frontais[0] < 80) && (sensores_frontais[4] > 185))
+    {
+      if (sensores_frontais[2] > 190)
+      {
+        set_bit(PORTD, AIN1); //frente direita
+        clr_bit(PORTD, AIN2);
+        clr_bit(PORTD, BIN2); //frente esquerda
+        set_bit(PORTD, BIN1);
+
+        setDuty_1(PWMA_C);
+        setDuty_2(PWMB_C);
+      
+    }
+    }
+    else if ((sensores_frontais[4]< 80) && (sensores_frontais[0] > 190))
+  {
+      if (sensores_frontais[2] > 190)
+      {
+        clr_bit(PORTD, AIN1); //frente direita
+        set_bit(PORTD, AIN2);
+        set_bit(PORTD, BIN2); //frente esquerda
+        clr_bit(PORTD, BIN1);
+
+        setDuty_1(PWMA_C);
+        setDuty_2(PWMB_C);
+      
+      }  
+  }
 }
 
 void calculo_do_erro()
 {
     int soma_esquerdo = 0, soma_direito = 0;
-    int denominador = 6;
+    static int denominador = 6;
     int soma_total = 0;   //caso aumente o peso da média_ponderada, tomar cuidado com a variável char
     
     static int peso [] = {-2, -1, 0, 1, 2};
@@ -417,8 +463,13 @@ void calculo_do_erro()
 
     soma_total = (soma_esquerdo + soma_direito)/ denominador;
     
-    erro = 16 - soma_total;   //valor esperado(estar sempre em cima da linha) - valor medido
+    erro = 17 - soma_total;   //valor esperado(estar sempre em cima da linha) - valor medido
 
+    
+    if(erro > 45)   //corrigindo assimetria
+    {
+        erro = 45;
+    }
     /*for(int i = 0; i < 5; i++)
     {
         sprintf(buffer, "%d\t", sensores_frontais[i]);
@@ -426,8 +477,8 @@ void calculo_do_erro()
     }
     UART_enviaCaractere('\n');*/
     
-    sprintf(buffer, "%d\n", erro);
-    UART_enviaString(buffer);
+    /*sprintf(buffer, "%d\n", erro);
+    UART_enviaString(buffer);*/
 }
 
 void estrategia()
@@ -452,12 +503,14 @@ void fim_de_pista()
        flag = 0;
     }
     
+    
     if(parada > 1)  //dois marcadores de parada
     {
-        freio();
         f_parada = 1;
+        freio();
         parada = 0;
     }
+    
 }
 
 void f_timers (void) {
@@ -468,8 +521,8 @@ void f_timers (void) {
     if(f_calibra)
     {
         
-        //funções a cada 100us
-        if(c_timer1 < 1-1)
+        //funções a cada 200us
+        if(c_timer1 < 2-1)
         {
             c_timer1++;
         }
