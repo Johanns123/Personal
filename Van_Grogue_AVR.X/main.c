@@ -24,8 +24,8 @@ int erro = 0;      //variável para cáculo do erro da direção do robô em cima da 
 unsigned int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
 unsigned int PWMA_C = 0, PWMB_C = 0; //PWM de curva com ajuste do PID;
 unsigned char sensores_frontais[5];
-unsigned int PWMR = 100; // valor da força do motor em linha reta
-unsigned int PWM_Curva = 80; //PWM ao entrar na curva
+unsigned int PWMR = 120; // valor da força do motor em linha reta
+unsigned int PWM_Curva = 100; //PWM ao entrar na curva
 
 //Variáveis globais da calibração de sensores
 unsigned char valor_max[5] = {0, 0, 0, 0, 0};
@@ -224,23 +224,27 @@ void parada()
     {
         flag = 1;
         flag_count = 1;
+        set_bit(PORTB, PB5);
     }
     
-    else if ((!tst_bit(leitura_curva, sensor_de_curva)) && (!tst_bit(leitura_parada, sensor_de_parada)) && flag_count) //verifica se é crizamento
+    else if ((!tst_bit(leitura_curva, sensor_de_curva)) && (!tst_bit(leitura_parada, sensor_de_parada)) && flag_count) //verifica se é cruzamento
     {
-        flag = 0;
-        flag_count = 1;
+        flag = 1;
+        flag_count = 0;
+        clr_bit(PORTB, PB5);
     }
     
     else if ((tst_bit(leitura_curva, sensor_de_curva)) && (tst_bit(leitura_parada, sensor_de_parada)) && flag_count)
     {
         flag = 0;
         flag_count = 0;
+        clr_bit(PORTB, PB5);
     }
     else if (!(tst_bit(leitura_curva, sensor_de_curva)) && (tst_bit(leitura_parada, sensor_de_parada)) && flag_count)
     {
         flag = 0;
         flag_count = 0;
+        clr_bit(PORTB, PB5);
     }
 
 
@@ -408,23 +412,23 @@ void sentido_de_giro()
 void PWM_limit() {
     //------> Limitando PWM
 
-    if (PWMA > 200)
+    if (PWMA > 220)
     {
-        PWMA = 200;
+        PWMA = 220;
     }
     
-    if (PWMA_C > 160)
+    if (PWMA_C > 180)
     {
-        PWMA_C = 160;
+        PWMA_C = 180;
     }
     
-    if (PWMB_C > 160)
+    if (PWMB_C > 180)
     {
-        PWMB_C = 160;
+        PWMB_C = 180;
     }
-    if (PWMB > 200)
+    if (PWMB > 220)
     {
-        PWMB = 200;
+        PWMB = 220;
     }
 }
 void volta_pra_pista(void)
@@ -556,8 +560,8 @@ void f_timers (void) {
     if(f_calibra)
     {
         
-        //funções a cada 200us
-        if(c_timer1 < 2-1)
+        //funções a cada 100us
+        if(c_timer1 < 1-1)
         {
             c_timer1++;
         }
