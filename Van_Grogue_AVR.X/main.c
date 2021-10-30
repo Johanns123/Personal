@@ -24,8 +24,8 @@ int erro = 0;      //variável para cáculo do erro da direção do robô em cima da 
 unsigned int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
 unsigned int PWMA_C = 0, PWMB_C = 0; //PWM de curva com ajuste do PID;
 unsigned char sensores_frontais[5];
-unsigned int PWMR = 160; // valor da força do motor em linha reta
-unsigned int PWM_Curva = 140; //PWM ao entrar na curva
+unsigned int PWMR = 220; // valor da força do motor em linha reta
+unsigned int PWM_Curva = 180; //PWM ao entrar na curva
 
 //Variáveis globais da calibração de sensores
 unsigned char valor_max[5] = {0, 0, 0, 0, 0};
@@ -413,17 +413,17 @@ void PWM_limit() {
     //------> Limitando PWM
     static int ExcessoB = 0, ExcessoA = 0;
     
-    if (PWMA > 320)
+    if (PWMA > 380)
     {
-      ExcessoB = (PWMA - 280);
-      PWMA = 320;
+      ExcessoB = (PWMA - 380);
+      PWMA = 380;
       PWMB -= ExcessoB;
     }
 
-    else if (PWMB > 320)
+    else if (PWMB > 380)
     {
-      ExcessoA = (PWMB - 320);
-      PWMB = 320;
+      ExcessoA = (PWMB - 380);
+      PWMB = 380;
       PWMA -= ExcessoA;
     }
 
@@ -441,17 +441,17 @@ void PWM_limit() {
       PWMA += ExcessoA;
     }    
         
-    if (PWMA_C > 280)
+    if (PWMA_C > 320)
     {
-      ExcessoB = (PWMA_C - 280);
-      PWMA_C = 280;
+      ExcessoB = (PWMA_C - 320);
+      PWMA_C = 320;
       PWMB_C -= ExcessoB;
     }
 
-    else if (PWMB_C > 280)
+    else if (PWMB_C > 320)
     {
-      ExcessoA = (PWMB_C - 280);
-      PWMB_C = 280;
+      ExcessoA = (PWMB_C - 320);
+      PWMB_C = 320;
       PWMA_C -= ExcessoA;
     }
 
@@ -498,7 +498,6 @@ void volta_pra_pista(void)
     
     else if ((sensores_frontais[4] > 190) && (sensores_frontais[0] > 190) && sensores_frontais[2] > 190)
     {
-        
         giro_direita();
         setDuty_1(PWMA_C);
         setDuty_2(PWMB_C); 
