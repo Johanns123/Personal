@@ -24,8 +24,8 @@ int erro = 0;      //variável para cáculo do erro da direção do robô em cima da 
 unsigned int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
 unsigned int PWMA_C = 0, PWMB_C = 0; //PWM de curva com ajuste do PID;
 unsigned char sensores_frontais[5];
-unsigned int PWMR = 120; // valor da força do motor em linha reta
-unsigned int PWM_Curva = 100; //PWM ao entrar na curva
+unsigned int PWMR = 140; // valor da força do motor em linha reta
+unsigned int PWM_Curva = 120; //PWM ao entrar na curva
 
 //Variáveis globais da calibração de sensores
 unsigned char valor_max[5] = {0, 0, 0, 0, 0};
@@ -297,7 +297,7 @@ void seta_calibracao() {
 
     
     
-    valor_min_abs = 70; //valores vistos pelo monitor serial
+    valor_min_abs = 100; //valores vistos pelo monitor serial
     valor_max_abs = 200;
 }
 
@@ -369,7 +369,7 @@ void sentido_de_giro()
     //-----> Área do senstido de giro
     static int u = 0; //valor de retorno do PID
     static int u_curva = 0; //valor de retorno do PID numa curva
-
+    
     if ((sensores_frontais[0] < 116 && sensores_frontais[4] > 196) || (sensores_frontais[0]  > 196 && sensores_frontais[4] < 109))    
         //Valores vistos na serial
         //se o primeiro sensor ou o último sensor estiverem lendo branco...
@@ -384,7 +384,8 @@ void sentido_de_giro()
         setDuty_1(PWMA_C);
         setDuty_2(PWMB_C);
     } //em cima da linha
-        
+       
+    
     else
     { 
         //pra frente - reta
@@ -402,7 +403,6 @@ void sentido_de_giro()
     }
     
     volta_pra_pista();
-    
     //sprintf(buffer, "%d\n", u);
     //UART_enviaString(buffer);
     //A função que fazia o robô rodar em seu próprio eixo foi removida
@@ -411,58 +411,97 @@ void sentido_de_giro()
 
 void PWM_limit() {
     //------> Limitando PWM
+    static int ExcessoB = 0, ExcessoA = 0;
+    
+    if (PWMA > 260)
+    {
+      ExcessoB = (PWMA - 260);
+      PWMA = 260;
+      PWMB -= ExcessoB;
+    }
 
-    if (PWMA > 220)
+    else if (PWMB > 260)
     {
-        PWMA = 220;
+      ExcessoA = (PWMB - 260);
+      PWMB = 260;
+      PWMA -= ExcessoA;
     }
-    
-    if (PWMA_C > 180)
+
+    if (PWMA < 0)
     {
-        PWMA_C = 180;
+      ExcessoB = (PWMA*(-1) * 2);
+      PWMA += (PWMA*(-1)*2);
+      PWMB += ExcessoB;
     }
-    
-    if (PWMB_C > 180)
+
+    else if (PWMB < 0)
     {
-        PWMB_C = 180;
-    }
-    if (PWMB > 220)
+      ExcessoA = (PWMB*(-1) * 2);
+      PWMB += (PWMB*(-1)*2);
+      PWMA += ExcessoA;
+    }    
+        
+    if (PWMA_C > 220)
     {
-        PWMB = 220;
+      ExcessoB = (PWMA_C - 220);
+      PWMA_C = 220;
+      PWMB_C -= ExcessoB;
     }
+
+    else if (PWMB_C > 220)
+    {
+      ExcessoA = (PWMB_C - 220);
+      PWMB_C = 220;
+      PWMA_C -= ExcessoA;
+    }
+
+    if (PWMA_C < 0)
+    {
+      ExcessoB = (PWMA_C*(-1)* 2);
+      PWMA_C += (PWMA_C*(-1)*2);
+      PWMB_C += ExcessoB;
+    }
+
+    else if (PWMB_C < 0)
+    {
+      ExcessoA = (PWMB_C*(-1) * 2);
+      PWMB_C += (PWMB_C*(-1)*2);
+      PWMA_C += ExcessoA;
+    }
+
 }
+
 void volta_pra_pista(void)
 {
-    if ((sensores_frontais[0] < 90) && (sensores_frontais[4] > 185))
+     /*Área de voltar para a pista*/
+    if ((sensores_frontais[0] < 101) && (sensores_frontais[4] > 190))
     {
-      if (sensores_frontais[2] > 170)
+      if (sensores_frontais[2] > 107)
       {
           
         giro_direita();
 
-        setDuty_1(PWMA_C);
-        setDuty_2(PWMB_C);
-      
+      }
     }
-    }
-    else if ((sensores_frontais[4]< 90) && (sensores_frontais[0] > 190))
-  {
-      if (sensores_frontais[2] > 170)
+    else if ((sensores_frontais[4]< 101) && (sensores_frontais[0] > 190))
+    {
+      if (sensores_frontais[2] > 107)
       {
         
         giro_esquerda();
-        setDuty_1(PWMA_C);
-        setDuty_2(PWMB_C);
-      
+
       }  
-  }
+    }
+    /*Fim de área para voltar para a pista*/
+    //Obs.: Os valores mudam de acordo com o N° de sens. e suas posições
+    //bem como a calibração dos mesmos.
 }
 
 void volta_pra_pista_calibracao(void)
 {    
     if ((sensores_frontais[4] < 200) && (sensores_frontais[0] < 200))
     {
-            while (sensores_frontais[1] < 80 && sensores_frontais[2] < 120)
+            while (sensores_frontais[1] < 101 && sensores_frontais[2] < 120)
             {
         
                 giro_direita();
@@ -474,7 +513,7 @@ void volta_pra_pista_calibracao(void)
     
     else if ((sensores_frontais[4] < 200) && (sensores_frontais[0] < 200))
     {
-            while (sensores_frontais[3] < 100 && sensores_frontais[2] < 80)
+            while (sensores_frontais[3] < 100 && sensores_frontais[2] < 99)
             {
         
                 giro_esquerda();
@@ -502,12 +541,17 @@ void calculo_do_erro()
 
     soma_total = (soma_esquerdo + soma_direito)/ denominador;
     
-    erro = 17 - soma_total;   //valor esperado(estar sempre em cima da linha) - valor medido
+    erro = 14 - soma_total;   //valor esperado(estar sempre em cima da linha) - valor medido
 
     
-    if(erro > 45)   //corrigindo assimetria
+    if(erro > 33)   //corrigindo assimetria
     {
-        erro = 45;
+        erro = 33;
+    }
+    
+    if(erro < -33)
+    {
+        erro = -33;
     }
     /*for(int i = 0; i < 5; i++)
     {
@@ -516,8 +560,8 @@ void calculo_do_erro()
     }
     UART_enviaCaractere('\n');*/
     
-    /*sprintf(buffer, "%d\n", erro);
-    UART_enviaString(buffer);*/
+    //sprintf(buffer, "%d\n", erro);
+    //UART_enviaString(buffer);
 }
 
 void estrategia()
