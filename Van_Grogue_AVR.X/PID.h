@@ -1,7 +1,7 @@
 int PID(int error)/*Algoritmo de controle PID usando os sensores frontais*/
 {
-    static int Kp = 10, Kd = 50, Ki = 0;
-    static int prescale = 2; //prescale na potência de 2: 2^n //4 = 16
+    static int Kp = 10, Kd = 10, Ki = 0;
+    static int prescale = 4; //prescale na potência de 2: 2^n //4 = 16
     static int integral = 0;
     static int erroAnterior = 0;
     static int p = 0, i = 0, d = 0;
