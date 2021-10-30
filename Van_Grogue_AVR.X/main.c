@@ -24,8 +24,8 @@ int erro = 0;      //variável para cáculo do erro da direção do robô em cima da 
 unsigned int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
 unsigned int PWMA_C = 0, PWMB_C = 0; //PWM de curva com ajuste do PID;
 unsigned char sensores_frontais[5];
-unsigned int PWMR = 140; // valor da força do motor em linha reta
-unsigned int PWM_Curva = 120; //PWM ao entrar na curva
+unsigned int PWMR = 160; // valor da força do motor em linha reta
+unsigned int PWM_Curva = 140; //PWM ao entrar na curva
 
 //Variáveis globais da calibração de sensores
 unsigned char valor_max[5] = {0, 0, 0, 0, 0};
@@ -413,17 +413,17 @@ void PWM_limit() {
     //------> Limitando PWM
     static int ExcessoB = 0, ExcessoA = 0;
     
-    if (PWMA > 260)
+    if (PWMA > 320)
     {
-      ExcessoB = (PWMA - 260);
-      PWMA = 260;
+      ExcessoB = (PWMA - 280);
+      PWMA = 320;
       PWMB -= ExcessoB;
     }
 
-    else if (PWMB > 260)
+    else if (PWMB > 320)
     {
-      ExcessoA = (PWMB - 260);
-      PWMB = 260;
+      ExcessoA = (PWMB - 320);
+      PWMB = 320;
       PWMA -= ExcessoA;
     }
 
@@ -441,17 +441,17 @@ void PWM_limit() {
       PWMA += ExcessoA;
     }    
         
-    if (PWMA_C > 220)
+    if (PWMA_C > 280)
     {
-      ExcessoB = (PWMA_C - 220);
-      PWMA_C = 220;
+      ExcessoB = (PWMA_C - 280);
+      PWMA_C = 280;
       PWMB_C -= ExcessoB;
     }
 
-    else if (PWMB_C > 220)
+    else if (PWMB_C > 280)
     {
-      ExcessoA = (PWMB_C - 220);
-      PWMB_C = 220;
+      ExcessoA = (PWMB_C - 280);
+      PWMB_C = 280;
       PWMA_C -= ExcessoA;
     }
 
@@ -480,6 +480,8 @@ void volta_pra_pista(void)
       {
           
         giro_direita();
+        setDuty_1(PWMA_C);
+        setDuty_2(PWMB_C);
 
       }
     }
@@ -489,8 +491,17 @@ void volta_pra_pista(void)
       {
         
         giro_esquerda();
-
+        setDuty_1(PWMA_C);
+        setDuty_2(PWMB_C);
       }  
+    }
+    
+    else if ((sensores_frontais[4] > 190) && (sensores_frontais[0] > 190) && sensores_frontais[2] > 190)
+    {
+        
+        giro_direita();
+        setDuty_1(PWMA_C);
+        setDuty_2(PWMB_C); 
     }
     /*Fim de área para voltar para a pista*/
     //Obs.: Os valores mudam de acordo com o N° de sens. e suas posições
