@@ -284,7 +284,7 @@ void seta_calibracao() {
         
 
     }*/
-    valor_min_abs = 70; //valores vistos pelo monitor serial
+    valor_min_abs = 100; //valores vistos pelo monitor serial
     valor_max_abs = 200;
 }
 
@@ -614,7 +614,7 @@ void f_timers (void) {
             c_timer2++; //100us -1; 200us-2;300 us-3; 400us de intervalo de tempo
         }
         
-        else    //a cada 400us
+        else    //a cada 300us
         {
             estrategia();
             c_timer2=0;
