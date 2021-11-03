@@ -22,11 +22,11 @@
 /*Variáveis globais*/
 int erro = 0;      //variável para cáculo do erro da direção do robô em cima da linha
 unsigned int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
-unsigned int PWMA_C = 0, PWMB_C = 0; //PWM de curva com ajuste do PID;
 unsigned char sensores_frontais[5];
-unsigned int PWMR = 240; // valor da força do motor em linha reta
-unsigned int PWM_Curva = 200; //PWM ao entrar na curva
-
+unsigned int PWMR = 100; // valor da força do motor em linha reta
+unsigned int PWM_Curva = 80; //PWM ao entrar na curva
+int u = 0; //valor de retorno do PID 
+    
 //Variáveis globais da calibração de sensores
 unsigned char valor_max[5] = {0, 0, 0, 0, 0};
 unsigned char valor_min[5] = {255, 255, 255, 255, 255};
@@ -37,14 +37,10 @@ unsigned char valor_min_abs = 0;
 char f_parada= 0;   //variável que comanda quando o robô deve parar e não realizar mais sua rotina
 char f_calibra = 0; //variável que indica o fim da calibração dos sensores e inicio da estratégia
 char flag = 0;      //variável de controle para identificar o momento de parada
-char flag_com = 0;
 char f_motor = 0;   //variável de controle da calibração automática
 
 volatile char ch; //armazena o caractere lido
 char buffer[5]; //String que armazena valores de entrada para serem printadas
-//Variáveis globais da UART
-/*char buffer[5]; //String que armazena valores de entrada para serem printadas
-volatile char ch; //armazena o caractere lido
 volatile char flag_com = 0; //flag que indica se houve recepção de dado*/
 
 /*tempo =65536 * Prescaler/Fosc = 65536 * 1024/16000000 = 4, 19s
@@ -222,23 +218,27 @@ void parada()
     {
         flag = 1;
         flag_count = 1;
+        set_bit(PORTB, PB5);
     }
     
     else if ((!tst_bit(leitura_curva, sensor_de_curva)) && (!tst_bit(leitura_parada, sensor_de_parada)) && flag_count) //verifica se é crizamento
     {
         flag = 0;
         flag_count = 1;
+        clr_bit(PORTB, PB5);
     }
     
     else if ((tst_bit(leitura_curva, sensor_de_curva)) && (tst_bit(leitura_parada, sensor_de_parada)) && flag_count)
     {
         flag = 0;
         flag_count = 0;
+        clr_bit(PORTB, PB5);
     }
     else if (!(tst_bit(leitura_curva, sensor_de_curva)) && (tst_bit(leitura_parada, sensor_de_parada)) && flag_count)
     {
         flag = 0;
         flag_count = 0;
+        clr_bit(PORTB, PB5);
     }
 
 
@@ -247,7 +247,7 @@ void parada()
 void calibra_sensores() 
 {
     //=====Função que inicializa a calibração====//
-    for (int i = 0; i < 120; i++) {
+    /*for (int i = 0; i < 120; i++) {
         for (int i = 0; i < 5; i++) {
             if (sensores_frontais[i] < valor_min [i]) {
                 valor_min[i] = sensores_frontais[i];
@@ -259,11 +259,11 @@ void calibra_sensores()
 
         //_delay_ms(20);  //tempo o suficiente para o pessoa calibrar os sensores mecanicamente
         
-        /*
-        Após isso determinar o limiar de todos os sensores para que eles tenham os mesmos valores do AD. 
-        Para que todos tenham um limite inferior e superior igual.
-        */
-    }
+        
+        //Após isso determinar o limiar de todos os sensores para que eles tenham os mesmos valores do AD. 
+        //Para que todos tenham um limite inferior e superior igual.
+        
+    }*/
 
 }
 
@@ -308,7 +308,7 @@ void sensores()
     
 }
 
-void Auto_calibration(void)
+void Auto_calibration(void)/*Sem uso*/
 {
     static unsigned char flag_D = 0, flag_E = 0;
     /*Calibração automática
@@ -351,24 +351,20 @@ void Auto_calibration(void)
 
 void sentido_de_giro()
 {
-    //-----> Área do senstido de giro
-    static int u = 0; //valor de retorno do PID
-    static int u_curva = 0; //valor de retorno do PID numa curva
-    static unsigned int PWM_Curva = 50; //PWM ao entrar na curva
-    
+    //-----> Área do senstido de giro       
+
     if ((sensores_frontais[0] < 101 && sensores_frontais[4] > 190) || (sensores_frontais[0]  > 190 && sensores_frontais[4] < 101))    
         //Valores vistos na serial
         //se o primeiro sensor ou o último sensor estiverem lendo branco...
         //necessário teste com monitor serial
         //estudar a melhor quantidade de sensores e seu espaçamento
     {
-        u_curva = PID(erro);
-        PWMA_C = PWM_Curva + u_curva;
-        PWMB_C = PWM_Curva - u_curva;
+        PWMA = PWM_Curva - u;
+        PWMB = PWM_Curva + u;
         frente();
         PWM_limit();
-        setDuty_1(PWMA_C);
-        setDuty_2(PWMB_C);
+        setDuty_1(PWMA);
+        setDuty_2(PWMB);
     } //em cima da linha
         
     else
@@ -376,11 +372,8 @@ void sentido_de_giro()
         //pra frente - reta
         //--------------->AREA DO PID<---------------
 
-        u = PID(erro);
-
-        PWMA = PWMR + u;
-        PWMB = PWMR - u;
-
+        PWMA = PWMR - u;
+        PWMB = PWMR + u;
         frente();
         PWM_limit();
         setDuty_1(PWMA);
@@ -391,8 +384,10 @@ void sentido_de_giro()
     
     //sprintf(buffer, "%d\n", u);
     //UART_enviaString(buffer);
-    //A função que fazia o robô rodar em seu próprio eixo foi removida
 
+    
+    //sprintf(buffer, "%d\t%d\n", PWMA, PWMB);
+    //UART_enviaString(buffer);
 }
 
 void PWM_limit() {
@@ -425,55 +420,43 @@ void PWM_limit() {
       ExcessoA = (PWMB*(-1) * 2);
       PWMB += (PWMB*(-1)*2);
       PWMA += ExcessoA;
-    }    
-        
-    if (PWMA_C > 400)
-    {
-      ExcessoB = (PWMA_C - 400);
-      PWMA_C = 400;
-      PWMB_C -= ExcessoB;
-    }
-
-    else if (PWMB_C > 400)
-    {
-      ExcessoA = (PWMB_C - 400);
-      PWMB_C = 400;
-      PWMA_C -= ExcessoA;
-    }
+    }        
 
 }
+
+
 void volta_pra_pista(void)
 {    
-    if ((sensores_frontais[0] < 101) && (sensores_frontais[4] > 190))
+    if ((sensores_frontais[1] < 101) && (sensores_frontais[3] > 190))//curva à esquerda
     {
       if (sensores_frontais[2] > 107)
       {
           
-        giro_direita();
-        setDuty_1(100);
-        setDuty_2(100);
+        giro_esquerda();
+        setDuty_1(PWMA);
+        setDuty_2(PWMB);
 
       }
     }
     
-    else if ((sensores_frontais[4]< 101) && (sensores_frontais[0] > 190))
+    else if ((sensores_frontais[3] < 101) && (sensores_frontais[1] > 190))//curva à direta
     {
       if (sensores_frontais[2] > 107)
       {
         
-        giro_esquerda();
-        setDuty_1(100);
-        setDuty_2(100);
+        giro_direita();
+        setDuty_1(PWMA);
+        setDuty_2(PWMB);
       }  
     }
     
-    else if ((sensores_frontais[4] > 190) && (sensores_frontais[0] > 190))
+    else if ((sensores_frontais[4] > 190) && (sensores_frontais[0] > 190))//saindo da pista, curva à esquerda
     {
         if(sensores_frontais[2] > 190)
         {
-            giro_direita();
-            setDuty_1(100);
-            setDuty_2(100); 
+            giro_esquerda();
+            setDuty_1(PWMA);
+            setDuty_2(PWMB); 
         }
         
         else
@@ -481,20 +464,19 @@ void volta_pra_pista(void)
             frente();
         }
     }
-    //Utilizar somente se o robô não estiver conseguindo fazer uma curva
     /*Fim de área para voltar para a pista*/
     //Obs.: Os valores mudam de acordo com o N° de sens. e suas posições
     //bem como a calibração dos mesmos.
 }
 
-void volta_pra_pista_calibracao(void)
+void volta_pra_pista_calibracao(void)/*A ser usado em uma calib. auto.*/
 {    
     if ((sensores_frontais[4] < 200) && (sensores_frontais[0] < 200))
     {
             while (sensores_frontais[1] < 101 && sensores_frontais[2] < 120)
             {
         
-                giro_direita();
+                giro_esquerda();
                 setDuty_1(PWM_Curva);
                 setDuty_2(PWM_Curva);
 
@@ -506,7 +488,7 @@ void volta_pra_pista_calibracao(void)
             while (sensores_frontais[3] < 100 && sensores_frontais[2] < 99)
             {
         
-                giro_esquerda();
+                giro_direita();
                 setDuty_1(PWM_Curva);
                 setDuty_2(PWM_Curva);
 
@@ -534,7 +516,7 @@ void calculo_do_erro()
     erro = 14 - soma_total;   //valor esperado(estar sempre em cima da linha) - valor medido
 
     
-    if(erro > 33)   //corrigindo assimetria
+    if(erro > 33)   //corrigindo assimetria(tentando)
     {
         erro = 33;
     }
@@ -543,6 +525,9 @@ void calculo_do_erro()
     {
         erro = -33;
     }
+    
+    u = PID(erro);
+    
     /*for(int i = 0; i < 5; i++)
     {
         sprintf(buffer, "%d\t", sensores_frontais[i]);
@@ -552,13 +537,14 @@ void calculo_do_erro()
     
     //sprintf(buffer, "%d\n", erro);
     //UART_enviaString(buffer);
+    
 }
 
 
 void estrategia()
 {
     
-    if (!f_parada)  //se f_parada for 0... 
+    if (!f_parada)              //se f_parada for 0... 
     {
         sensores();             //seta o limiar da leitura dos sensores
         calculo_do_erro();      //faz a média ponderada e calcula o erro
@@ -652,12 +638,12 @@ void f_timers (void) {
 
 /*Observações:
   Foram utilizados somente 5 sensores pois o módulo está assimétrico em relação ao robô, e
- *a forma mais simples de corrigir isso é usando os 5 sensores,
+  a forma mais simples de corrigir isso é usando os 5 sensores,
   mesmo não estando 100% simétrico.
   Por causa disso foi necessário alterar o setpoint do erro para termos um erro = 0
   quando o robô estivesse acima da linha.
   Foi visto também pela serial o limite superior e inferior dos sensores e foram
-  setados em valor_max_abs e valor_min_abs pois a calibração não estava funcionando
+  setados em valor_max_abs e valor_min_abs para testes mais práticos.
   Além disso foi feito uma leitura serial dos sensores em uma curva,
   virando tanto pra esquerda quanto para a direita para saber os valores AD
   dos sensores extremos em cada situação para se iniciar uma curva*/
