@@ -26,7 +26,7 @@ void direita_frente()  //direita sentido direto
     clr_bit(PORTD, BIN1);
 }
 
-void giro_direita()
+void giro_esquerda()
 {
     set_bit(PORTD, AIN1); //frente direita
     clr_bit(PORTD, AIN2);
@@ -34,7 +34,7 @@ void giro_direita()
     set_bit(PORTD, BIN1);
 }
 
-void giro_esquerda()
+void giro_direita()
 {
     clr_bit(PORTD, AIN1); //frente direita
     set_bit(PORTD, AIN2);
