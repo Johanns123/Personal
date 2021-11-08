@@ -23,8 +23,8 @@
 int erro = 0;      //variável para cáculo do erro da direção do robô em cima da linha
 unsigned int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
 unsigned char sensores_frontais[5];
-unsigned int PWMR = 160; // valor da força do motor em linha reta
-unsigned int PWM_Curva = 140; //PWM ao entrar na curva
+unsigned int PWMR = 220; // valor da força do motor em linha reta
+unsigned int PWM_Curva = 200; //PWM ao entrar na curva
 int u = 0; //valor de retorno do PID 
     
 //Variáveis globais da calibração de sensores
@@ -40,9 +40,6 @@ char flag = 0;      //variável de controle para identificar o momento de parada
 char f_motor = 0;   //variável de controle da calibração automática
 char flag_curva = 0;    //cronometragem entre as retas e as cruvas
 char flag_parada = 0;   //inicia e encerra a cronometragem da pista
-
-
-unsigned int millis = 0;
 
 volatile char ch; //armazena o caractere lido
 char buffer[5]; //String que armazena valores de entrada para serem printadas
@@ -474,6 +471,7 @@ void volta_pra_pista(void)
         setDuty_1(PWMA);
         setDuty_2(PWMB); 
     }
+    
     /*Fim de área para voltar para a pista*/
     //Obs.: Os valores mudam de acordo com o N° de sens. e suas posições
     //bem como a calibração dos mesmos.
@@ -576,8 +574,8 @@ void fim_de_pista()
     
     if(parada > 1)  //dois marcadores de parada
     {
-        f_parada = 1;
-        freio();
+        //f_parada = 1;
+        //freio();
         parada = 0;
     }
     
@@ -649,9 +647,9 @@ void f_timers (void) {
         
     }
     
-    if(flag_parada)
+    /*if(flag_parada)
     {   
-        /*Timer*/
+        //Timer
         //1ms
         if(c_timer4 < 10-1)
         {
@@ -686,7 +684,7 @@ void f_timers (void) {
             
             c_timer4 = 0;
         }
-    }
+    }*/
 }//fim do programa
 
 /*Observações:
