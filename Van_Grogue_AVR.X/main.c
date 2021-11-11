@@ -23,23 +23,23 @@
 int erro = 0;      //variável para cáculo do erro da direção do robô em cima da linha
 unsigned int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
 unsigned char sensores_frontais[5];
-unsigned int PWMR = 220; // valor da força do motor em linha reta
-unsigned int PWM_Curva = 200; //PWM ao entrar na curva
+unsigned int PWMR = 200; // valor da força do motor em linha reta
+unsigned int PWM_Curva = 180; //PWM ao entrar na curva
 int u = 0; //valor de retorno do PID 
     
 //Variáveis globais da calibração de sensores
-unsigned char valor_max[5] = {0, 0, 0, 0, 0};
-unsigned char valor_min[5] = {255, 255, 255, 255, 255};
+/*unsigned char valor_max[5] = {0, 0, 0, 0, 0};
+unsigned char valor_min[5] = {255, 255, 255, 255, 255};*/
 unsigned char valor_max_abs = 255;
 unsigned char valor_min_abs = 0;
 
 //variáveis de controle
-char f_parada= 0;   //variável que comanda quando o robô deve parar e não realizar mais sua rotina
-char f_calibra = 0; //variável que indica o fim da calibração dos sensores e inicio da estratégia
-char flag = 0;      //variável de controle para identificar o momento de parada
-char f_motor = 0;   //variável de controle da calibração automática
+char f_parada= 0;       //variável que comanda quando o robô deve parar e não realizar mais sua rotina
+char flag = 0;          //variável de controle para identificar o momento de parada
+char f_motor = 0;       //variável de controle da calibração automática
 char flag_curva = 0;    //cronometragem entre as retas e as cruvas
 char flag_parada = 0;   //inicia e encerra a cronometragem da pista
+char f_calibra = 0;     //vai pra 1 quando a calibração é finalizada
 
 volatile char ch; //armazena o caractere lido
 char buffer[5]; //String que armazena valores de entrada para serem printadas
@@ -68,6 +68,7 @@ void fim_de_pista();        //verifica se é o fim da psita
 void f_timers (void);       //função de temporização das rotinas
 void Auto_calibration(void);
 void volta_pra_pista(void);
+void millis(void);
 /*===========================================================================*/
 
 /*Interrupções*/
@@ -116,14 +117,14 @@ void calibration()
      //----> Calibração dos Sensores frontais <----//
     set_bit(PORTB, led);
     ADC_maq();  //inicializa a conversão do AD
-    calibra_sensores(); //calibração dos sensores //A calibração vai conseguir acompanhar o AD
+    //calibra_sensores(); //calibração dos sensores //A calibração vai conseguir acompanhar o AD
                                                   //ou pode ser que o vetor não seja preenchido a tempo?
                                                   //É necessário colocar um contador
                                                   //para depois chamar a função de calibração?
     
     seta_calibracao(); //estabelece o limiar dos sensores através dos valores da função de cima
     
-    clr_bit(PORTB, led);
+    /*clr_bit(PORTB, led);
     _delay_ms(250);
     set_bit(PORTB, led); //subrotina de acender e apagar o LED 13
     _delay_ms(250);
@@ -132,7 +133,9 @@ void calibration()
     set_bit(PORTB, led);
     _delay_ms(250);
     clr_bit(PORTB, led);
-    _delay_ms(1000);
+    _delay_ms(1000);*/
+    
+    f_calibra = 1;
     
     /*if(f_motor) //para o robô para iniciar a rotina
     {
@@ -140,7 +143,6 @@ void calibration()
         setDuty_1(0);
         setDuty_2(0);
     }*/
-    f_calibra = 1;  //flag para indicar fim da calibração
 }
 
 void setup_logica()
@@ -323,36 +325,39 @@ void Auto_calibration(void)/*Sem uso*/
     *num intervalo de tempo e depois mudar o sentido de giro.
     *Em seguida fazer o mesmo com a outra roda.*/
     
-    if(!flag_D)
+    if(!f_motor)
     {
-        direita_frente();
-        setDuty_1(300);
-        setDuty_2(0);
-        flag_D = 1;
-    }
-    
-    else if(flag_D)
-    {
-        direita_tras();
-        setDuty_1(300);
-        setDuty_2(0);
-        flag_E = 1;
-    }
-    
-    else if(flag_E)
-    {
-        esquerda_frente();
-        setDuty_1(0);
-        setDuty_2(300);
-        flag_E = 0;
-    }
-    
-    else if(!flag_E)
-    {
-        esquerda_tras();
-        setDuty_1(0);
-        setDuty_2(300);
-        f_motor = 1;
+        if(!flag_D)
+        {
+            direita_frente();
+            setDuty_1(300);
+            setDuty_2(0);
+            flag_D = 1;
+        }
+
+        else if(flag_D)
+        {
+            direita_tras();
+            setDuty_1(300);
+            setDuty_2(0);
+            flag_E = 1;
+        }
+
+        else if(flag_E)
+        {
+            esquerda_frente();
+            setDuty_1(0);
+            setDuty_2(300);
+            flag_E = 0;
+        }
+
+        else if(!flag_E)
+        {
+            esquerda_tras();
+            setDuty_1(0);
+            setDuty_2(300);
+            f_motor = 1;
+        }
     }
 }
 
@@ -397,7 +402,8 @@ void sentido_de_giro()
     //UART_enviaString(buffer);
 }
 
-void PWM_limit() {
+void PWM_limit()
+{
     //------> Limitando PWM
     static int ExcessoB = 0, ExcessoA = 0;
     
@@ -457,7 +463,7 @@ void volta_pra_pista(void)
       }  
     }*/
     
-    if ((sensores_frontais[4] > 190) && (sensores_frontais[2] > 190))//saindo da pista, curva à esquerda
+    if ((sensores_frontais[4] > 190) && (sensores_frontais[2] > 195))//saindo da pista, curva à esquerda
     {
         giro_esquerda();
         setDuty_1(PWMA);
@@ -465,13 +471,14 @@ void volta_pra_pista(void)
         
     }
     
-    else if((sensores_frontais[0] > 190) && sensores_frontais[2] > 190)
+    else if((sensores_frontais[0] > 190) && sensores_frontais[2] > 160)
     {
         giro_direita();
         setDuty_1(PWMA);
         setDuty_2(PWMB); 
     }
     
+        
     /*Fim de área para voltar para a pista*/
     //Obs.: Os valores mudam de acordo com o N° de sens. e suas posições
     //bem como a calibração dos mesmos.
@@ -521,10 +528,10 @@ void calculo_do_erro()
 
     soma_total = (soma_esquerdo + soma_direito)/ denominador;
     
-    erro = 14 - soma_total;   //valor esperado(estar sempre em cima da linha) - valor medido
+    erro = 0 - soma_total;   //valor esperado(estar sempre em cima da linha) - valor medido
 
     
-    if(erro > 33)   //corrigindo assimetria(tentando)
+    /*if(erro > 33)   //corrigindo assimetria(tentando)
     {
         erro = 33;
     }
@@ -532,7 +539,7 @@ void calculo_do_erro()
     if(erro < -33)
     {
         erro = -33;
-    }
+    }*/
     
     u = PID(erro);
     
@@ -551,14 +558,15 @@ void calculo_do_erro()
 
 void estrategia()
 {
-    
-    if (!f_parada)              //se f_parada for 0... 
+    if(f_calibra)//se f_calibra for 1...
     {
-        sensores();             //seta o limiar da leitura dos sensores
-        calculo_do_erro();      //faz a média ponderada e calcula o erro
-        sentido_de_giro();      //Verifica se precisa fazer uma curva e o cálculo do PID
-    }
-        
+        if (!f_parada)  //se f_parada for 0... 
+        {
+            sensores();             //seta o limiar da leitura dos sensores
+            calculo_do_erro();      //faz a média ponderada e calcula o erro
+            sentido_de_giro();      //Verifica se precisa fazer uma curva e o cálculo do PID
+        }
+    }   
 }
 
 void fim_de_pista()
@@ -581,110 +589,105 @@ void fim_de_pista()
     
 }
 
+void millis(void)
+{
+    static unsigned f_read = 0;
+    static unsigned int millis = 0;
+    
+    millis++;
+    
+    if(flag_parada)//criar uma função para printar na tela
+    { if(flag_curva && !f_read)
+        {
+            sprintf(buffer, "%dms\n", millis);
+            UART_enviaString(buffer);
+            millis = 0;
+            f_read = 1;
+        }
+
+        else if(!flag_curva && f_read)
+        {
+            f_read = 0;
+        }
+
+
+        if(f_parada)
+        {
+            sprintf(buffer, "%dms\n", millis);
+            UART_enviaString(buffer);
+            millis = 0;
+            flag_parada = 0;
+        }
+    }
+}
+
+/*Parte não visível ao usuário*/
 void f_timers (void) {
 
     static unsigned char c_timer1 = 0;
     static unsigned char c_timer2 = 0;
-    //static unsigned char c_timer3_ms = 0, c_timer3 = 0;
+    static unsigned char c_timer3_ms = 0, c_timer3 = 0;
     static unsigned char c_timer4 = 0;
-    static unsigned int c_timer4_ms = 0;
-    static unsigned f_read = 0;
-    
-    if(f_calibra)
+        
+    //funções a cada 200us
+    if(c_timer1 < 2-1)
     {
-        
-        //funções a cada 200us
-        if(c_timer1 < 2-1)
-        {
-            c_timer1++;
-        }
-        
-        else
-        {
-            parada();
-            fim_de_pista();         //Verifica se é o fim da pista
-            c_timer1 = 0;
-        }
-        
-        /*300us*/
-        if (c_timer2 < 3-1)   //o 0 conta na contagem -> 4-1
-        {
-            c_timer2++; //100us -1; 200us-2;300 us-3; 400us de intervalo de tempo
-        }
-        
-        else    //a cada 300us
-        {
-            estrategia();
-            c_timer2=0;
-        }
-        
+        c_timer1++;
     }
-    
+
     else
     {
-        /**if(c_timer3_ms < 100 - 1)   //10ms
-        {
-            c_timer3_ms++;
-        }
-        
-        else
-        {
-            if(c_timer3 < 200 - 1)  //2000ms = 2s
-            {
-                c_timer3++;
-            }
-            
-            else 
-            {   
-                if(!f_motor)
-                {
-                    Auto_calibration();
-                }
-                c_timer3 = 0;
-            }
-            c_timer3_ms = 0;
-        }*/
-        
+        parada();
+        fim_de_pista();         //Verifica se é o fim da pista
+        c_timer1 = 0;
     }
+
+    /*300us*/
+    if (c_timer2 < 3-1)   //o 0 conta na contagem -> 3-1
+    {
+        c_timer2++; //100us -1; 200us-2;300 us-3; 300us de intervalo de tempo
+    }
+
+    else    //a cada 300us
+    {
+        estrategia();
+        c_timer2 = 0;
+    }
+
+    if(c_timer3_ms < 100 - 1)   //10ms
+    {
+        c_timer3_ms++;
+    }
+
+    else
+    {
+        if(c_timer3 < 200 - 1)  //2000ms = 2s
+        {
+            c_timer3++;
+        }
+
+        else 
+        {   
+            //Auto_calibration();
+            c_timer3 = 0;
+        }
+        c_timer3_ms = 0;
+    }
+
     
-    /*if(flag_parada)
-    {   
-        //Timer
-        //1ms
-        if(c_timer4 < 10-1)
-        {
-            c_timer4++;
-        }
+      
+    //Timer
+    //1ms
+    if(c_timer4 < 10-1)
+    {
+        c_timer4++;
+    }
 
-        else
-        {
-            c_timer4_ms++;
-            
-            if(flag_curva && !f_read)
-            {
-                sprintf(buffer, "%dms\n", c_timer4_ms);
-                UART_enviaString(buffer);
-                c_timer4_ms = 0;
-                f_read = 1;
-            }
-            
-            else if(!flag_curva && f_read)
-            {
-                f_read = 0;
-            }
-            
-
-            if(f_parada)
-            {
-                sprintf(buffer, "%dms\n", c_timer4_ms);
-                UART_enviaString(buffer);
-                c_timer4_ms = 0;
-                flag_parada = 0;
-            }
-            
-            c_timer4 = 0;
-        }
-    }*/
+    else
+    {
+        //millis();   //função chamada a cada 1ms 
+        c_timer4 = 0;
+    }
 }//fim do programa
 
 /*Observações:
