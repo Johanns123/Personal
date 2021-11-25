@@ -370,8 +370,8 @@ void sentido_de_giro()
 {
     //-----> Área do senstido de giro       
     static int u = 0;
-    static unsigned int PWMR = 200; // valor da força do motor em linha reta
-    static unsigned int PWM_Curva = 180; //PWM ao entrar na curva
+    static unsigned int PWMR = 140; // valor da força do motor em linha reta
+    static unsigned int PWM_Curva = 120; //PWM ao entrar na curva
     
     u = PID(erro); //valor de retorno do PID 
     
@@ -394,8 +394,8 @@ void sentido_de_giro()
         //pra frente - reta
         //--------------->AREA DO PID<---------------
 
-        PWMA = PWMR - u;
-        PWMB = PWMR + u;
+        PWMA = PWMR;
+        PWMB = PWMR;
         frente();
         PWM_limit();
         setDuty_1(PWMA);
@@ -473,7 +473,7 @@ void volta_pra_pista(void)
       }  
     }*/
     
-    if ((sensores_frontais[4] > 190) && (sensores_frontais[2] > 195))//saindo da pista, curva à esquerda
+    if ((sensores_frontais[4] > 190) && (sensores_frontais[2] > 190))//saindo da pista, curva à esquerda
     {
         giro_esquerda();
         setDuty_1(PWMA);
@@ -481,7 +481,7 @@ void volta_pra_pista(void)
         
     }
     
-    else if((sensores_frontais[0] > 190) && sensores_frontais[2] > 160)
+    else if((sensores_frontais[0] > 190) && sensores_frontais[2] > 190)
     {
         giro_direita();
         setDuty_1(PWMA);
