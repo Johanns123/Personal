@@ -26,13 +26,12 @@ int dias_desde_domingo;
 int correcao = 0;
 int selecao = 0;
 FILE *file;   //crio um ponteiro para a variável FILE
-char *nomes [11] = {"Gabriel",
+char *nomes [10] = {"Gabriel",
                     "Josef",
                     "Custodio",
                     "Leonardo",
                     "Jonathan",
                     "Lucas",
-                    "Alexandre",
                     "Alexsandro",
                     "Natha",
                     "Rodrigo",
@@ -89,7 +88,7 @@ int main(){
 
         numeracao_dos_dias(i);
 
-        if(quarta < sabado && mes < mes2)
+        if(quarta < sabado || (mes < mes2 || (mes2 != 1  || mes != 1)))
         {
             fprintf(file, "%2d/%2d/%d,", quarta, mes, ano);
             retorno = 0;
@@ -103,7 +102,7 @@ int main(){
             correcao = 1;
             fprintf(file, "%2d/%2d/%d,", sabado, mes2, ano2);
             retorno = 1;
-            escreve_nomes(11,correcao);
+            escreve_nomes(10,correcao);
             contador++;
         }
 
@@ -113,7 +112,7 @@ int main(){
         if(!retorno)
         {
             fprintf(file, "%2d/%2d/%d,", sabado, mes2, ano2);
-            escreve_nomes(11,correcao);
+            escreve_nomes(10,correcao);
             //contador++;
         }
         else
