@@ -6,6 +6,31 @@
 
 ## modelo espaço livre
 
+'''
+Dados utilizados no artigo "CAPACIDADE E PREDIÇÃO DE CANAIS SEM FIO
+EM ONDAS MILIMÉTRICAS PARA REDES
+CELULARES DE QUINTA GERAÇÃO":
+Em 2.5GHz:
+
+Potência de saída do amplificador do transmissor é igual a 46.02dbm, pois o rádio comercial utiliza
+esse valor na prática. Pt
+Os ganhos na transmissão são de 0 dB. Gt
+As perdas na transmissão são de 0 dB.
+As perdas por cabo no valor de 4 dB a cada 100 metros.
+O comprimento do cabo de 10 metros, considerando que o rádio esteja próximo da antena
+junto à torre de sustentação.
+As perdas por conectores de 0.5 dB e a quantidade de conectores igual a 4, dois conectando o
+rádio ao cabo e dois conectando o cabo à antena, tanto na transmissão quanto na recepção.
+O ganho da antena ajustado manualmente em 15.8 dBd, tanto na recepção quanto na trans-
+missão.
+A potência de saída do receptor de 22.99dbm.
+Os ganhos na recepção são de 3 dB.  Gr
+Não há perdas na recepção.
+A potência efetivamente radiada calculada em 59.4 dBm.
+Raio de alcance: 10km
+'''
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 import random
@@ -61,13 +86,14 @@ def calculo_modelo_sem_perdas(Pt_dBm, Gt_dBi, Gr_dBi, f, d, L, n):
     return Pr_dBm
 
 
-def log_dist():
+'''def log_dist():
 
-    Pt_dBm = 52
-    Gt_dBi = 25
-    Gr_dBi = 15
-    f = 3 * (10 ** 10)   ##30MHz
-    d0 = 1
+    Pt_dBm = 46.02  ##Potência de transmissão
+    Gt_dBi = 0      ##ganho de transmissão
+    Gr_dBi = 3      ##ganho de recpeção
+    f = 2.5 * (10 ** 9)   ##2.5MHz
+
+    d0 = 1  ##distância de referência
 
     d = 100 * np.array(
         [np.arange(1.0, 100, 0.2)]
@@ -77,9 +103,9 @@ def log_dist():
         1.0, 100, 0.2
     )  ##ponto de partida, ponto de chegada e o passo
 
-    L = 1
-    sigma = 6
-    n = 3.5
+    L = 1       ##admitindo sistema sem perdas
+    sigma = 6   ##desvio padrão normal do modelos
+    n = 3.5     ##constante atribuída para ambiente com obstrução por construções
 
     Pr_friis = calculo_modelo_sem_perdas(Pt_dBm, Gt_dBi, Gr_dBi, f, d1, L, n)
 
@@ -104,8 +130,9 @@ def log_dist():
     plt.grid(True)
 
     plt.show()
+'''
 
-
+##função do cálclo do modelo Log_normal
 def logNormalShadowing(Pt_dBm, Gt_dBi, Gr_dBi, f, d0, d, L, sigma, n):
 
     lambda1 = 3 * (10 ** 8) / f
@@ -125,23 +152,27 @@ def logNormalShadowing(Pt_dBm, Gt_dBi, Gr_dBi, f, d0, d, L, sigma, n):
 
 def log_normal():
 
-    Pt_dBm = 52
-    Gt_dBi = 25
-    Gr_dBi = 15
-    f = 30 * (10 ** 9) ##30GHz
-    d0 = 1
+    Pt_dBm = 46.02  ##Potência de transmissão
+    '''dbi = dbm + 2.15
+       dbi = 3 + 2.15 = 5.15'''
 
+    Gt_dBi = 25            ##ganho de transmissão
+    Gr_dBi = 15         ##ganho de recpeção
+    f = 2.5 * (10 ** 9)   ##2.5GHz
+
+    d0 = 1      ##distância de referência de 1m
+       
     d = 100 * np.array(
-        [np.arange(1.0, 100, 0.2)]
+        [np.arange(1.0, 200, 0.2)]
     )  ##ponto de partida, ponto de chegada e o passo
 
     d1 = 100 * np.arange(
-        1.0, 100, 0.2
+        1.0, 200, 0.2
     )  ##ponto de partida, ponto de chegada e o passo
 
-    L = 1
-    sigma = 6
-    n = 3.5
+    L = 1       ##admitindo sistema sem perdas
+    sigma = 0   ##desvio padrão normal do modelos
+    n = 3.5     ##constante atribuída para ambiente com obstrução por construções
 
     Pr_friis = calculo_modelo_sem_perdas(Pt_dBm, Gt_dBi, Gr_dBi, f, d1, L, n)
 
@@ -163,47 +194,47 @@ def log_normal():
 
 
 def modelo_close_in_reference():
-    f = 300*10**9;      ##300GHz
-    R = -1;  ##coeficiente de reflexão
-    Pt = 1;
-    Glos = 1;
-    Gref = 1;
-    ht = 50;
-    hr = 2;
-    d = np.arange(1,10**5, 0.1);
-    L = 1;
+    f = 300*10**9      ##300GHz
+    R = -1  ##coeficiente de reflexão
+    Pt = 1
+    Glos = 1
+    Gref = 1
+    ht = 30
+    hr = 30
+    d = np.arange(1,10**5, 0.1)
+    L = 1
 
 
-    d_los = np.sqrt((ht - hr)**2+d**2);
-    d_ref = np.sqrt((ht + hr)**2+d**2);
-    lambda1 = 3*10**8/f;
-    phi = 2*np.pi*(d_ref-d_los)/lambda1;
-    s = lambda1/(4*np.pi)*(np.sqrt(Glos)/d_los + R*np.sqrt(Gref)/d_ref*np.exp(1j*phi));
-    Pr = Pt*np.abs(s)**2;
-    ##Pr_norm = Pr/Pr(1);
+    d_los = np.sqrt((ht - hr)**2+d**2)
+    d_ref = np.sqrt((ht + hr)**2+d**2)
+    lambda1 = 3*10**8/f
+    phi = 2*np.pi*(d_ref-d_los)/lambda1
+    s = lambda1/(4*np.pi)*(np.sqrt(Glos)/d_los + R*np.sqrt(Gref)/d_ref*np.exp(1j*phi))
+    Pr = Pt*np.abs(s)**2
+    ##Pr_norm = Pr/Pr(1)
 
-    plt.semilogx(d,10*np.log10(Pr));
-    ##ylim([-160 -55]);
-    plt.title('Two ray ground reflection model');
-    plt.xlabel('log_{10} (d)');
-    plt.ylabel('Normalized Received power (in dB)');
+    plt.semilogx(d,10*np.log10(Pr))
+    ##ylim([-160 -55])
+    plt.title('Two ray ground reflection model')
+    plt.xlabel('log_{10} (d)')
+    plt.ylabel('Normalized Received power (in dB)')
 
 
-    dc = 4*ht*hr/lambda1;
-    d1 = np.arange(1,ht, 0.1);
-    d2 = np.arange(ht,dc, 0.1);
-    d3 =  np.arange(dc,10**5, 0.1);
+    dc = 4*ht*hr/lambda1
+    d1 = np.arange(1,ht, 0.1)
+    d2 = np.arange(ht,dc, 0.1)
+    d3 =  np.arange(dc,10**5, 0.1)
 
-    K_fps = Glos*Gref*lambda1**2/((4*np.pi)**2*L);
-    K_2ray = Glos*Gref*ht**2*hr**2/L;
+    K_fps = Glos*Gref*lambda1**2/((4*np.pi)**2*L)
+    K_2ray = Glos*Gref*ht**2*hr**2/L
 
-    Pr1 = Pt*K_fps/(d1**2+ht**2);
-    Pr2 = Pt*K_fps/d2**2;
-    Pr3 = Pt*K_2ray/d3**4;
+    Pr1 = Pt*K_fps/(d1**2+ht**2)
+    Pr2 = Pt*K_fps/d2**2
+    Pr3 = Pt*K_2ray/d3**4
 
-    plt.semilogx(d1,10*np.log10(Pr1), 'k-.');
-    plt.semilogx(d2,10*np.log10(Pr2), 'r-.');
-    plt.semilogx(d3,10*np.log10(Pr3), 'g-.');
+    plt.semilogx(d1,10*np.log10(Pr1), 'k-.')
+    plt.semilogx(d2,10*np.log10(Pr2), 'r-.')
+    plt.semilogx(d3,10*np.log10(Pr3), 'g-.')
 
     plt.axvline(x=ht, color='m')
     plt.axvline(x=dc, color='m')
@@ -211,8 +242,8 @@ def modelo_close_in_reference():
     plt.grid()
     plt.show()
 
-    #h = line([ht ht], [-160 -55]); set(h, 'Color', 'm');
-    #h = line([dc dc], [-160 -55]); set(h, 'Color', 'm');
+    #h = line([ht ht], [-160 -55]); set(h, 'Color', 'm')
+    #h = line([dc dc], [-160 -55]); set(h, 'Color', 'm')
 
 
 def modelo_Okumura_Hata():
@@ -263,8 +294,8 @@ while acabou == 0:
     print("Digite qual modelo de propagação deseja calcular:")
     opcao = int(
         input(
-            "Modelo espaço livre - 1\nModelo log-distância - 2:\nModelo log-normal - 3\nModelo Colse-in-Reference - 4\n"
-            "Modelo Okumura Hata - 5\n"
+            "Modelo espaço livre - 1\nModelo log-normal - 2\nModelo Colse-in-Reference - 3\n"
+            "Modelo Okumura Hata - 4\n"
         )
     )
 
@@ -274,16 +305,14 @@ while acabou == 0:
         espaco_livre()
 
     elif opcao == 2:
-        log_dist()
-
-    elif opcao == 3:
         log_normal()
 
-    elif opcao == 4:
+    elif opcao == 3:
         modelo_close_in_reference()
 
-    elif opcao == 5:
+    elif opcao == 4:
         modelo_Okumura_Hata()
+        
 
     acabou = int(input("Tecle 0 para calcular novamente ou 1 para encerrar: "))
     # fim da função principal
