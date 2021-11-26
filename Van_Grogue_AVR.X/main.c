@@ -68,6 +68,10 @@ void f_timers (void);       //função de temporização das rotinas
 void Auto_calibration(void);
 void volta_pra_pista(void);
 void millis(void);
+void f_timer1(void);
+void f_timer2(void);
+void f_timer3(void);
+void f_timer4(void);
 /*===========================================================================*/
 
 /*Interrupções*/
@@ -373,7 +377,6 @@ void sentido_de_giro()
     static unsigned int PWMR = 140; // valor da força do motor em linha reta
     static unsigned int PWM_Curva = 120; //PWM ao entrar na curva
     
-    u = PID(erro); //valor de retorno do PID 
     
     if ((sensores_frontais[0] < 101 && sensores_frontais[4] > 190) || (sensores_frontais[0]  > 190 && sensores_frontais[4] < 101))    
         //Valores vistos na serial
@@ -381,6 +384,7 @@ void sentido_de_giro()
         //necessário teste com monitor serial
         //estudar a melhor quantidade de sensores e seu espaçamento
     {
+        u = PID(erro); //valor de retorno do PID (rotacional)
         PWMA = PWM_Curva - u;
         PWMB = PWM_Curva + u;
         frente();
@@ -393,9 +397,9 @@ void sentido_de_giro()
     { 
         //pra frente - reta
         //--------------->AREA DO PID<---------------
-
-        PWMA = PWMR;
-        PWMB = PWMR;
+        u = PID(erro); //valor de retorno do PID (rotacional)
+        PWMA = PWMR - u;
+        PWMB = PWMR + u;
         frente();
         PWM_limit();
         setDuty_1(PWMA);
@@ -630,74 +634,97 @@ void millis(void)
     }
 }
 
+#define temp_min 1
 /*Parte não visível ao usuário*/
-void f_timers (void) {
-
+void f_timers (void) 
+{
     static unsigned char c_timer1 = 0;
     static unsigned char c_timer2 = 0;
-    static unsigned char c_timer3_ms = 0, c_timer3 = 0;
+    static unsigned char c_timer3 = 0;
     static unsigned char c_timer4 = 0;
         
     //funções a cada 200us
-    if(c_timer1 < 2-1)      //tempo que quer menos 1
+    if(c_timer1 < 2 - temp_min)      //tempo que quer menos 1
     {
         c_timer1++;
     }
 
     else
     {
-        parada();
-        fim_de_pista();         //Verifica se é o fim da pista
+        f_timer1();
         c_timer1 = 0;
     }
 
     /*300us*/
-    if (c_timer2 < 3-1)   //o 0 conta na contagem -> 3-1
+    if (c_timer2 < 3 - temp_min)   //o 0 conta na contagem -> 3-1
     {
         c_timer2++; //100us -1; 200us-2;300 us-3; 300us de intervalo de tempo
     }
 
     else    //a cada 300us
     {
-        estrategia();
+        f_timer2();
         c_timer2 = 0;
     }
 
-    if(c_timer3_ms < 100 - 1)   //10ms
+    if(c_timer3 < 100 - temp_min)   //10ms
     {
-        c_timer3_ms++;
+        c_timer3++;
     }
 
     else
     {
-        if(c_timer3 < 200 - 1)  //2000ms = 2s
-        {
-            c_timer3++;
-        }
-
-        else 
-        {   
-            //Auto_calibration();
-            c_timer3 = 0;
-        }
-        c_timer3_ms = 0;
+        f_timer3();
+        c_timer3 = 0;
     }
 
-    
-      
     //Timer
     //1ms
-    if(c_timer4 < 10-1)
+    if(c_timer4 < 10 - temp_min)
     {
         c_timer4++;
     }
 
     else
     {
-        //millis();   //função chamada a cada 1ms 
+        f_timer4();
         c_timer4 = 0;
     }
 }//fim do programa
+
+void f_timer1(void)
+{
+    parada();
+    fim_de_pista();         //Verifica se é o fim da pista
+}
+
+void f_timer2(void)
+{
+    estrategia();
+}
+
+void f_timer3(void)
+{   
+    static unsigned char c_timer = 0;
+    
+    if(c_timer < 200 - temp_min)  //2000ms = 2s
+    {
+        c_timer++;
+    }
+
+    else 
+    {   
+        //Auto_calibration();
+        c_timer = 0;
+    }
+}
+
+void f_timer4(void)
+{
+    //millis();   //função chamada a cada 1ms 
+
+}
+
 
 /*Observações:
   Foram utilizados somente 5 sensores pois o módulo está assimétrico em relação ao robô, e
