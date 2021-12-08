@@ -400,6 +400,8 @@ void escreve_nomes(int num, char opt)
     static char *linha1 [10] = {0};
     static char *linha2 [10] = {0};
     static char *linha3 [10] = {0};
+    static char *linha4 [10] = {0};
+
     static int indice = 0;
 
     for(int j = 0; j < 4; j++)
@@ -422,30 +424,35 @@ void escreve_nomes(int num, char opt)
 
         if(indice == 2)
         {
-            linha1 [j] = nomes[numero_aleatorio];
-            if(linha1 [j] == linha0[j])
+            linha2 [j] = nomes[numero_aleatorio];
+            if(linha2 [j] == linha0[j])
             {
-                printf("linha1: %s\t%s\n", linha0[j], linha1[j]);
-                linha1 [j] = nomes[numero_aleatorio];
+                printf("linha1: %s\t%s\n", linha0[j], linha2[j]);
+                numero_aleatorio = sorteio_de_nomes(j, num);
+                linha2 [j] = nomes[numero_aleatorio];
             }
         }
 
         if(indice == 4)
         {
-            linha2 [j] = nomes[numero_aleatorio];
-            if(linha2 [j] == linha1[j])
+            linha4 [j] = nomes[numero_aleatorio];
+            if(linha4 [j] == linha2[j])
             {
-                printf("linha2: %s\t%s\n", linha1[j], linha2[j]);
-                linha2 [j] = nomes[numero_aleatorio];
+                printf("linha2: %s\t%s\n", linha4[j], linha2[j]);
+                numero_aleatorio = sorteio_de_nomes(j, num);
+                linha4 [j] = nomes[numero_aleatorio];
             }
         }
-        fprintf(file, "%10s,", nomes[numero_aleatorio]);
 
+
+
+        fprintf(file, "%10s,", nomes[numero_aleatorio]);
+    
     }
 
     indice++;   //depois que é feito a impressão de uma linha
 
-
+    if(indice > 3)  indice = 0;
 
 }
 
