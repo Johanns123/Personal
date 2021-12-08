@@ -43,6 +43,7 @@ int numero(int num);
 void numeracao_dos_dias(int i);
 int sorteio_de_nomes(int j, int num);
 void escreve_nomes(int num, char opt);
+void nao_repete_por_numero_de_semanas(int numero_aleatorio, int j, int num);
 
 int main(){
     setlocale(LC_ALL,"Portuguese_Brazil");
@@ -395,24 +396,63 @@ int sorteio_de_nomes(int j, int num)
 /*Fazer a leitura do arquivo e verificar as strings procurando uma forma de mapear o arquivo em uma matriz*/
 void escreve_nomes(int num, char opt)
 {
-    /*static int linha = 1;     //54caracteres cada linha
-    static int caracter = 0;
+    static char *linha0 [10] = {0};     //vetores de string para comparação entre as designações de dias da semana iguais mas em semanas diferentes
+    static char *linha1 [10] = {0};
+    static char *linha2 [10] = {0};
+    static char *linha3 [10] = {0};
+    static int indice = 0;
 
-    caracter = linha * 54;
-    static char *nomes_atual[11] = {"0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"};     //guarda os nomes designados
-    static char *nomes_anterior[11] = {"0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"};     //guarda os nomes designados
-    static char *nomes_proximo[11] = {"0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"};     //guarda os nomes designados
-*/
     for(int j = 0; j < 4; j++)
     {
 
         static int numero_aleatorio = 0;
-        static int counter, counter1, counter2, counter3, counter4, counter5, counter6, counter7, counter8, counter9;
+        
 
         numero_aleatorio = sorteio_de_nomes(j, num);
 
 
-        switch(numero_aleatorio)
+        nao_repete_por_numero_de_semanas(numero_aleatorio, j, num);
+
+        if(!indice)
+        {
+
+            linha0 [j] = nomes[numero_aleatorio];
+            
+        }
+
+        if(indice == 2)
+        {
+            linha1 [j] = nomes[numero_aleatorio];
+            if(linha1 [j] == linha0[j])
+            {
+                printf("linha1: %s\t%s\n", linha0[j], linha1[j]);
+                linha1 [j] = nomes[numero_aleatorio];
+            }
+        }
+
+        if(indice == 4)
+        {
+            linha2 [j] = nomes[numero_aleatorio];
+            if(linha2 [j] == linha1[j])
+            {
+                printf("linha2: %s\t%s\n", linha1[j], linha2[j]);
+                linha2 [j] = nomes[numero_aleatorio];
+            }
+        }
+        fprintf(file, "%10s,", nomes[numero_aleatorio]);
+
+    }
+
+    indice++;   //depois que é feito a impressão de uma linha
+
+
+
+}
+
+void nao_repete_por_numero_de_semanas(int numero_aleatorio, int j, int num)
+{
+    static int counter, counter1, counter2, counter3, counter4, counter5, counter6, counter7, counter8, counter9;
+    switch(numero_aleatorio)
         {
             case 0:
             if(counter > selecao) numero_aleatorio = sorteio_de_nomes(j, num);
@@ -465,11 +505,4 @@ void escreve_nomes(int num, char opt)
             break;
 
         }
-
-
-        fprintf(file, "%10s,", nomes[numero_aleatorio]);
-
-    }
-
-    /*linha++;*/
 }
