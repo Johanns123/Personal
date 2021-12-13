@@ -216,6 +216,8 @@ def modelo_Okumura_Hata():
 
     ambiente = int(input("Digite 1 para metrô, 2 para cidade pequena, 3 para subúrbio, 4 para ambiente aberto: "))
 
+    PL = 0
+
     if ambiente == 1:
         C = 0
         if f <= 200:
@@ -243,7 +245,7 @@ def modelo_Okumura_Hata():
     if L_50.all() < 0:
         PL = Gt_dBi + Pt_dB + L_50
 
-    elif L_50.all() > 0:
+    if L_50.all() > 0:
         PL = Gt_dBi + Pt_dB - L_50
 
     plt.plot(d, PL)
@@ -255,18 +257,18 @@ def modelo_Okumura_Hata():
     plt.show()
 
 def Hata_modified():
-    f = 2.5 * (10 ** 9)         ##2.5GHz
-    hb = 30                     ##Altura da estação de base em m
-    hm = 30                     ##Altura da estação móvel em m
-    d = np.arange(0.12,1, 0.001)    ##varredura de 20km
+    f = 2.5 * (10 ** 9)             ##2.5GHz
+    hb = 30                         ##Altura da estação de base em m
+    hm = 30                         ##Altura da estação móvel em m
+    d = np.arange(0.12,1, 0.001)    ##varredura de 1km
  
-    Pt_dB = 16.02              ##Potência de transmissão
-    Gt_dBi = 0                  ##ganho de transmissão
+    Pt_dB = 16.02                   ##Potência de transmissão
+    Gt_dBi = 0                      ##ganho de transmissão
     
-    alpha = 1                   ##valor qnd menor que 20km
+    alpha = 1                       ##valor qnd menor que 20km
 
     a_hm = (1.1*np.log10(f) - 0.7)*10 - (1.56*np.log10(f) - 0.8)
-    + np.log10(hm/10)
+    + 20*np.log10(hm/10)
 
     b_hb = (1.1*np.log10(f) - 0.7) * 10 - (1.56*np.log10(f) - 0.8) 
     + 20*np.log10(hb/10)
