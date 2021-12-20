@@ -205,7 +205,7 @@ def two_ray_model():
 
 def modelo_Okumura_Hata():
     f = 2.5 * (10 ** 9)         ##2.5GHz
-    d = np.arange(1,20, 0.1)    ##até 20Km, unidade em Km
+    d = np.arange(1,10, 0.1)    ##até 20Km, unidade em Km
     hb = 30                     ##Altura da estação de base em m
     hm = 30                     ##Altura da estação móvel em m
     aHm = 0
@@ -213,7 +213,8 @@ def modelo_Okumura_Hata():
 
     Pt_dB = 16.02   ##dB = dBm - 30  ##Potência de transmissão
     Gt_dBi = 0                  ##ganho de transmissão
-
+    Gr_dBi = 3      ##3dB
+    
     ambiente = int(input("Digite 1 para metrô, 2 para cidade pequena, 3 para subúrbio, 4 para ambiente aberto: "))
 
     PL = 0
@@ -243,10 +244,10 @@ def modelo_Okumura_Hata():
     L_50 = A+(B*np.log10(d))+C
 
     if L_50.all() < 0:
-        PL = Gt_dBi + Pt_dB + L_50
+        PL = Gt_dBi + Pt_dB + Gr_dBi + L_50
 
     if L_50.all() > 0:
-        PL = Gt_dBi + Pt_dB - L_50
+        PL = Gt_dBi + Pt_dB + Gr_dBi - L_50
 
     plt.plot(d, PL)
     plt.xlabel('Distância em kilômetros')
