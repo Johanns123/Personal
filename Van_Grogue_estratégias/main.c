@@ -429,7 +429,7 @@ void count_pulsesE() {
 
 }
 
-/*int calculo_do_raio() //esta função calcula o raio a partir da disância percorrida pelas duas rodas do robô
+int calculo_do_raio() //esta função calcula o raio a partir da disância percorrida pelas duas rodas do robô
 {
     static unsigned int raio = 0;
     unsigned int diametro = 126; //126mm, diâmetro sas rodas
@@ -446,7 +446,7 @@ void count_pulsesE() {
     }
 
     return raio;
-}*/
+}
 
 //=========Funções visíveis ao usuário===========//
 //reavaliar esta função devido à pista possuir um "S" e somente três marcadores de curva
