@@ -4,11 +4,10 @@
 #include <stdio.h>
 #include <string.h>
 #include "PID.h"
-#include "fatfs_sd.h"	//biblioteca de manipulação do cartão sd
+//#include "fatfs_sd.h"	//biblioteca de manipulação do cartão sd
+#include "Driver_motor.h"
 
 /* Private variables ---------------------------------------------------------*/
-ADC_HandleTypeDef hadc1;
-DMA_HandleTypeDef hdma_adc1;
 
 SPI_HandleTypeDef hspi1;
 
@@ -19,25 +18,25 @@ UART_HandleTypeDef huart1;
 DMA_HandleTypeDef hdma_usart1_rx;
 DMA_HandleTypeDef hdma_usart1_tx;
 
+ADC_HandleTypeDef hadc1;
+DMA_HandleTypeDef hdma_adc1;
+
+
 /*Variáveis globais*/
+unsigned char curva1 = 0, curva2;	//variáveis usadas no cálculo do raio de cada curva
 int erro = 0;      //variável para cáculo do erro da direção do robô em cima da linha
 unsigned int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
 unsigned int PWMA_C = 0, PWMB_C = 0; //PWM de curva com ajuste do PID;
-uint32_t AD[9];	//variável para armazenar os valores do AD
 uint32_t sensores_frontais[6];
 uint32_t sensores_laterais[2];
-uint32_t sensor_de_tensao[1];
 
-//Variáveis globais da calibração de sensores
-unsigned int valor_max[6] = {0, 0, 0, 0, 0, 0};
-unsigned int valor_min[6] = {4096, 4096, 4096, 4096, 4096, 4096};
-unsigned int valor_max_abs = 4096;
-unsigned int valor_min_abs = 0;
 
 //variáveis de controle
 char f_parada= 0;   //variável que comanda quando o robô deve parar e não realizar mais sua rotina
 char f_calibra = 0; //variável que indica o fim da calibração dos sensores e inicio da estratégia
 char flag = 0;      //variável de controle para identificar o momento de parada
+
+unsigned char pulse_numberD = 0, pulse_numberE = 0; //variáveis para contagem dos pulsos dos encoders
 
 /*Vairáveis da UART*/
 uint8_t rx_data[1] = {0}; //UART de 8 bits
@@ -46,18 +45,17 @@ uint8_t tx_data [100] = {0};
 int f_button = 0;//botão de inicialização da rotina, ainda a ser implementado
 
 /*Variáveis de manipulação de arquivos*/
-FATFS 		 fs;  //file system
+/*FATFS 		 fs;  //file system
 FIL 		fil;  //file
 FRESULT fresult;  //to store the result
 char buffer[1024];//to store data
 
-UINT br, bw;	  //file read/write count
+UINT br, bw;	  //file read/write count*/
 
 /*Capacity related variables*/
-FATFS 		 *pfs;
+/*FATFS 		 *pfs;
 DWORD	fre_clust;
-uint32_t total, free_space;
-
+uint32_t total, free_space;*/
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -65,16 +63,11 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USART1_UART_Init(void);
-static void MX_ADC1_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
-
-
+static void MX_ADC1_Init(void);
 /***********Protótipo das funções************/
 void parada();              //Leitura dos sensores laterais
-void calibra_sensores();    //calibra sensores manualmente
-void seta_calibracao();     //estabelece o limiar dos valores máximos e mínimos de leitura
-void sensores();            //caso um sensor passe do valor, o mesmo é corrigido
 void setup();
 void setup_Hardware();      //define os registradores
 void setup_logica();
@@ -89,6 +82,11 @@ void frente();
 void tras();
 void motor_off();
 void freio();
+void count_pulsesD();
+void count_pulsesE();
+float calculo_do_raio();
+void entrou_na_curva();
+
 /*===========================================================================*/
 
 int main(void)
@@ -98,14 +96,12 @@ int main(void)
 
 }
 
-//===Funções não visíveis ao usuário======//
-void setup()
+void setup(void)
 {
 	setup_Hardware();   //setup das IO's e das interrupções
 	calibration();      //rotina de calibração
 	setup_logica();     //definição das variáveis lógicas(vazio por enquanto)
 }//end setup
-
 
 void setup_Hardware()
 {
@@ -120,29 +116,26 @@ void setup_Hardware()
 	/* Initialize all configured peripherals */
 	MX_GPIO_Init();
 	MX_DMA_Init();
-	MX_SPI1_Init();
+	//MX_SPI1_Init();
 	MX_USART1_UART_Init();
 	MX_FATFS_Init();
-	MX_ADC1_Init();
 	MX_TIM1_Init();
 	MX_TIM2_Init();
+	MX_ADC1_Init();
 	HAL_TIM_Base_Start_IT(&htim2);
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-	HAL_ADC_Start_DMA(&hadc1, AD, 9);	//start o ADC com DMA
+	HAL_TIM_PWM_Start(&htim1, PWMA_Pin);
+	HAL_TIM_PWM_Start(&htim1, PWMB_Pin);
 	//esse valor é o buffer, onde os valores do AD são armazenados
 	//2 são os valores que serão armazenados == número de canais do AD em uso ou mútiplos
 	HAL_UART_Receive_DMA(&huart1, rx_data, 1);//inicializo o RX em modo DMA
 	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);//inicializo o led desligado
+	//GPIOA->ODR = 0x00000000;
 }
 
 void calibration()
 {
      //----> Calibração dos Sensores frontais <----//
     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
-    calibra_sensores(); //calibração dos sensores //A calibração vai conseguir acompanhar o AD
-
-    seta_calibracao(); //estabelece o limiar dos sensores através dos valores da função de cima
 
     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 1);
     HAL_Delay(500);
@@ -188,71 +181,6 @@ void parada()
 
 }
 
-void calibra_sensores()
-{
-    //=====Função que inicializa a calibração====//
-    for (int i = 0; i < 120; i++)
-    {
-        for (int i = 0; i < 6; i++)
-        {
-            if (sensores_frontais[i] < valor_min [i])
-            {
-                valor_min[i] = sensores_frontais[i];
-            }
-            if (sensores_frontais[i] > valor_max [i])
-            {
-                valor_max[i] = sensores_frontais[i];
-            }
-        }
-
-        HAL_Delay(20);  //tempo o suficiente para o pessoa calibrar os sensores mecanicamente
-
-        /*
-        Após isso determinar o limiar de todos os sensores para que eles tenham os mesmos valores do AD.
-        Para que todos tenham um limite inferior e superior igual.
-        */
-    }
-
-}
-
-void seta_calibracao() {
-    //----> Calibração dos Sensores frontais <----//
-
-    //função que seta o limiar dos sensores
-    //Este é o algoritmo a ser usado no robô. Desmcomente antes de compilar e comente o outro.
-    for (int i = 0; i < 6; i++)
-    {
-        if (valor_min [i] > valor_min_abs)// && valor_min[i] !=0 ) //esse !0 foi colocado pois estava havendo um bug ao simular
-        {
-            valor_min_abs = valor_min [i];
-        }
-
-        if (valor_max [i] < valor_max_abs)
-        {
-            valor_max_abs = valor_max [i];
-        }
-
-    }
-}
-
-void sensores()
-{
-
-    //======Estabelece o limiar da leitura dos sensores====//
-    //função de correção da calibração
-    for (int i = 0; i < 6; i++) {
-        if (sensores_frontais[i] < valor_min_abs)
-        {
-            sensores_frontais[i] = valor_min_abs;
-        }
-        if (sensores_frontais[i] > valor_max_abs)
-        {
-            sensores_frontais[i] = valor_max_abs;
-        }
-
-    }
-}
-
 
 void sentido_de_giro()
 {
@@ -272,8 +200,8 @@ void sentido_de_giro()
         PWMB_C = PWM_Curva + u_curva;
         frente();
         PWM_limit();
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, PWMA_C);	//PWM de 100Hz, variável varia de 0 a 10000
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, PWMB_C);
+        __HAL_TIM_SET_COMPARE(&htim1, PWMA_Pin, PWMA_C);	//PWM de 100Hz, variável varia de 0 a 10000
+        __HAL_TIM_SET_COMPARE(&htim1, PWMB_Pin, PWMB_C);
     } //em cima da linha
 
     else
@@ -289,8 +217,8 @@ void sentido_de_giro()
 
         frente();
         PWM_limit();
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, PWMA);	//PWM de 100Hz, variável varia de 0 a 10000
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, PWMB);
+        __HAL_TIM_SET_COMPARE(&htim1, PWMA_Pin, PWMA);	//PWM de 100Hz, variável varia de 0 a 10000
+        __HAL_TIM_SET_COMPARE(&htim1, PWMB_Pin, PWMB);
     }
 
     //A função que fazia o robô rodar em seu próprio eixo foi removida
@@ -300,21 +228,21 @@ void sentido_de_giro()
 void PWM_limit() {
     //------> Limitando PWM
 
-    if (PWMA > 10000)//PWM de 16 bits limitado até 10000
+    if (PWMA > 9999)//PWM de 16 bits limitado até 10000
     {
         PWMA = 9800;
     }
 
-    if (PWMA_C > 10000)
+    if (PWMA_C > 9999)
     {
         PWMA_C = 9800;
     }
 
-    if (PWMB_C > 10000)
+    if (PWMB_C > 9999)
     {
         PWMB_C = 9800;
     }
-    if (PWMB > 10000)
+    if (PWMB > 9999)
     {
         PWMB = 9800;
     }
@@ -340,13 +268,61 @@ void calculo_do_erro()
     erro = 0 - soma_total;   //valor esperado(estar sempre em cima da linha) - valor medido
 }
 
+
+
+void count_pulsesD()
+{
+    static int Encoder_C1Last = 0, direction_m;
+
+    int Lstate = HAL_GPIO_ReadPin(Encoder_D1_GPIO_Port, Encoder_D1_Pin);//variável de leitura de um dos pinos do encoderD
+
+    if (!Encoder_C1Last && Lstate) { //Verifica se Encoder_C1Last é falso e Lstate é verdadeiro
+        int val = HAL_GPIO_ReadPin(Encoder_D2_GPIO_Port, Encoder_D2_Pin);; //Variável de leitura do segundo pino do encoderD
+
+        if (!val && direction_m) direction_m = 0; //sentido horário
+
+        else if (val && !direction_m) direction_m = 1; //sentido anti-horário
+    }
+
+    Encoder_C1Last = Lstate;
+
+    if (!direction_m) pulse_numberD++; //sentido horário
+    else pulse_numberD--;
+
+
+
+}
+
+void count_pulsesE()
+{
+    static int Encoder_C1Last = 0, direction_m;
+
+    int Lstate = HAL_GPIO_ReadPin(Encoder_E1_GPIO_Port, Encoder_E1_Pin);; //variável de leitura de um dos pinos do encoderD
+
+    if (!Encoder_C1Last && Lstate)
+    { //Verifica se Encoder_C1Last é falso e Lstate é verdadeiro
+        int val = HAL_GPIO_ReadPin(Encoder_E2_GPIO_Port, Encoder_E2_Pin);//Variável de leitura do segundo pino do encoderD
+
+        if (!val && direction_m) direction_m = 0; //sentido horário
+
+        else if (val && !direction_m) direction_m = 1; //sentido anti-horário
+    }
+
+    Encoder_C1Last = Lstate;
+
+    if (!direction_m) pulse_numberD++; //sentido horário
+    else pulse_numberD--; //sentido anti-horário
+
+
+}
+
 void estrategia()
 {
 
     if (!f_parada)  //se f_parada for 0...
     {
-        sensores();             //seta o limiar da leitura dos sensores
         calculo_do_erro();      //faz a média ponderada e calcula o erro
+        entrou_na_curva();		//verifica o fim de uma reta ou de uma curva
         sentido_de_giro();      //Verifica se precisa fazer uma curva e o cálculo do PID
     }
 
@@ -404,117 +380,82 @@ void f_timers (void) {
 }//fim do programa
 
 
-//botões por interrupção
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-    /*int flag_bot = 0, flag_bot2 = 0;
+//=========Funções visíveis ao usuário===========//
+//reavaliar esta função devido à pista possuir um "S" e somente três marcadores de curva
 
-    if(GPIO_Pin == Encoder_D1_Pin)
+void entrou_na_curva()
+{
+    static float dist_reta1 = 0, dist_reta2 = 0;
+    static unsigned int entrou = 0;
+    static float reta_med = 0;
+
+    if (sensores_laterais[0] < 800 && sensores_laterais[1] > 1000)
+        //li branco no sensor de curva e li preto no sensor de parada
     {
-    	if(!flag_bot && HAL_GPIO_ReadPin(Encoder_D1_GPIO_Port, Encoder_D1_Pin))
-    	{
+        switch (entrou) {
+            case 0: //entrou na curva
+				dist_reta1 = pulse_numberD * 0.812;
+				dist_reta2 = pulse_numberE * 0.812;
+				if (!dist_reta1 && !dist_reta2); //nao printa;
+				else
+				{
+					reta_med = (dist_reta1+dist_reta2)/2;
+					//sprintf((char *)tx_data, "RetaD %.2f\n", reta_med); //Converte para string
+					//HAL_UART_Transmit(&huart1, tx_data, strlen((const char *)tx_data), 500);
+					reta_med = 0x00;
+				} //printa na serial a distancia;
+				pulse_numberD = 0x00;
+				dist_reta1 = 0x00;
+				pulse_numberE = 0x00;
+				dist_reta2 = 0x00; //zera as variáveis de cálculo da distância
+                entrou = 1;
+                break;
 
-    		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-    		flag_bot = 1;
-    	}
-    	else if(flag_bot && !HAL_GPIO_ReadPin(Encoder_D1_GPIO_Port, Encoder_D1_Pin))
-    	{
+            case 1:
+				curva1 = pulse_numberD * 0.812; //converte o número de pulsos em mm
+				curva2 = pulse_numberE * 0.812;
+				calculo_do_raio();
+				curva1 = 0x00;
+				pulse_numberD = 0x00;
+				curva2 = 0x00;
+				pulse_numberE = 0x00; //zera as variáveis de cálculo do raio da curva
 
-    		flag_bot = 0;
-    	}
+				if ((sensores_frontais[0] < 200 && sensores_frontais[5] > 900) || (sensores_frontais[0] > 900 && sensores_frontais[5] < 200))
+				{//se o primeiro sensor ou o último sensor estiverem lendo branco...
+
+					entrou = 1;
+				}
+				else{
+					entrou = 0;
+				}
+
+				break;
+        }
     }
+}
 
-    else if(GPIO_Pin == Encoder_E1_Pin)
+//-u _printf_float
+
+float calculo_do_raio() //esta função calcula o raio a partir da disância percorrida pelas duas rodas do robô
+{
+    static float raio = 0;
+    unsigned int diametro = 126; //126mm, diâmetro sas rodas
+    if (!(curva1) && !(curva2)); //não calcula o raio se não mediu a curva
+    else if (curva1 != curva2)
     {
-    	if(!flag_bot2 && HAL_GPIO_ReadPin(Encoder_E1_GPIO_Port, Encoder_E1_Pin))
-		{
+        raio = (diametro / 2) * ((curva1 + curva2) / (curva1 - curva2)); //Cálculo do raio em módulo
+        if(raio < 0)	raio *= -1;	//normaliza para números positivos
+        //sprintf((char*) tx_data, "Raio %.2f\n", raio); //Converte para string	//se o float não funcionar, usar tec. de cent, dez e uni
+        //HAL_UART_Transmit(&huart1, tx_data, strlen((const char *)tx_data), 500);
 
-			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-			flag_bot2 = 1;
-		}
-		else if(flag_bot2 && !HAL_GPIO_ReadPin(Encoder_E1_GPIO_Port, Encoder_E1_Pin))
-		{
-
-			flag_bot2 = 0;
-		}
     }
-
-
-    else;*/
+    return raio;
 }
 
+/*Atrelar às funções quando guardar e imprimir o valor da distância das retas e a distância das curvas*/
 
-void frente()
-{
-
-	HAL_GPIO_WritePin(AIN1_GPIO_Port, AIN1_Pin, 1);//frente direita
-	HAL_GPIO_WritePin(AIN2_GPIO_Port, AIN2_Pin, 0);
-	HAL_GPIO_WritePin(BIN1_GPIO_Port, BIN1_Pin, 1);//frente esquerda
-	HAL_GPIO_WritePin(BIN1_GPIO_Port, BIN2_Pin, 0);
-}
-
-void tras()
-{
-	HAL_GPIO_WritePin(AIN1_GPIO_Port, AIN1_Pin, 0);//trás direita
-	HAL_GPIO_WritePin(AIN2_GPIO_Port, AIN2_Pin, 1);
-	HAL_GPIO_WritePin(BIN1_GPIO_Port, BIN1_Pin, 0);//trás esquerda
-	HAL_GPIO_WritePin(BIN1_GPIO_Port, BIN2_Pin, 1);
-
-}
-
-void motor_off()
-{
-	HAL_GPIO_WritePin(AIN1_GPIO_Port, AIN1_Pin, 0);//trás direita
-	HAL_GPIO_WritePin(AIN2_GPIO_Port, AIN2_Pin, 0);
-	HAL_GPIO_WritePin(BIN1_GPIO_Port, BIN1_Pin, 0);//trás esquerda
-	HAL_GPIO_WritePin(BIN1_GPIO_Port, BIN2_Pin, 0);
-}
-
-void freio() {
-    /*frente();
-
-    setDuty_1(200);
-    setDuty_2(200);
-
-    _delay_ms(500);
-
-    tras();
-
-    setDuty_1(150);
-    setDuty_2(150);
-
-    _delay_ms(5);
-
-    frente();
-
-    setDuty_1(0);
-    setDuty_2(0);
-
-    _delay_ms(2000);
-
-    motor_off();
-
-    _delay_ms(60000);*/
-
-    motor_off();        //desliga os motores para deoxar o pr�prio atrito frear o rob�
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);	//PWM de 100Hz, variável varia de 0 a 10000
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
-}//end of motor_driver
 
 /*******************Funções das interrupções*******************/
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-
-	for (int i = 0; i < 6; i++)
-	{
-	   sensores_frontais[i] = AD[i];
-	}
-
-	for(int i = 0; i < 2; i++)
-	{
-		sensores_laterais[i] = AD[i+6];
-	}
-
-	sensor_de_tensao[1] = AD[8];
-}
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
@@ -525,9 +466,27 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     }
 
 }
-/**********Final das interrupções********/
 
+//botões por interrupção
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
+    if(GPIO_Pin == Encoder_D1_Pin)
+    {
+    	count_pulsesD();
+    }
+
+    else if(GPIO_Pin == Encoder_E1_Pin)
+    {
+    	count_pulsesE();
+    }
+
+    else;
+}
+
+/**
+  * @brief System Clock Configuration
+  * @retval None
+  */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -589,85 +548,21 @@ static void MX_ADC1_Init(void)
   /** Common config
   */
   hadc1.Instance = ADC1;
-  hadc1.Init.ScanConvMode = ADC_SCAN_ENABLE;
+  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
   hadc1.Init.ContinuousConvMode = ENABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 9;
+  hadc1.Init.NbrOfConversion = 1;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
     Error_Handler();
   }
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_0;
-  sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_71CYCLES_5;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Regular Channel
-  */
-  sConfig.Channel = ADC_CHANNEL_1;
-  sConfig.Rank = ADC_REGULAR_RANK_2;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Regular Channel
-  */
-  sConfig.Channel = ADC_CHANNEL_2;
-  sConfig.Rank = ADC_REGULAR_RANK_3;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Regular Channel
-  */
-  sConfig.Channel = ADC_CHANNEL_3;
-  sConfig.Rank = ADC_REGULAR_RANK_4;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Regular Channel
-  */
-  sConfig.Channel = ADC_CHANNEL_4;
-  sConfig.Rank = ADC_REGULAR_RANK_5;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Regular Channel
-  */
-  sConfig.Channel = ADC_CHANNEL_5;
-  sConfig.Rank = ADC_REGULAR_RANK_6;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Regular Channel
-  */
-  sConfig.Channel = ADC_CHANNEL_6;
-  sConfig.Rank = ADC_REGULAR_RANK_7;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Regular Channel
-  */
   sConfig.Channel = ADC_CHANNEL_7;
-  sConfig.Rank = ADC_REGULAR_RANK_8;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Regular Channel
-  */
-  sConfig.Channel = ADC_CHANNEL_9;
-  sConfig.Rank = ADC_REGULAR_RANK_9;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_55CYCLES_5;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -918,7 +813,7 @@ static void MX_GPIO_Init(void)
                           |BIN1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, Buzzer_Pin|B_multiplexer_Pin|A_multiplexer_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : LED_Pin */
   GPIO_InitStruct.Pin = LED_Pin;
@@ -926,6 +821,16 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : QTR0_Pin QTR1_Pin QTR2_Pin QTR3_Pin
+                           QTR4_Pin QTR5_Pin QTR6_Pin Curva_Pin
+                           Parada_Pin */
+  GPIO_InitStruct.Pin = QTR0_Pin|QTR1_Pin|QTR2_Pin|QTR3_Pin
+                          |QTR4_Pin|QTR5_Pin|QTR6_Pin|Curva_Pin
+                          |Parada_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : CS_Pin AIN2_Pin AIN1_Pin BIN2_Pin
                            BIN1_Pin */
@@ -936,8 +841,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : Button_Pin Encoder_D2_Pin Encoder_E2_Pin */
-  GPIO_InitStruct.Pin = Button_Pin|Encoder_D2_Pin|Encoder_E2_Pin;
+  /*Configure GPIO pins : SW_Pin Encoder_D2_Pin Encoder_E2_Pin */
+  GPIO_InitStruct.Pin = SW_Pin|Encoder_D2_Pin|Encoder_E2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -948,18 +853,18 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : Buzzer_Pin B_multiplexer_Pin A_multiplexer_Pin */
-  GPIO_InitStruct.Pin = Buzzer_Pin|B_multiplexer_Pin|A_multiplexer_Pin;
+  /*Configure GPIO pin : Buzzer_Pin */
+  GPIO_InitStruct.Pin = Buzzer_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(Buzzer_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : Switch_Pin */
-  GPIO_InitStruct.Pin = Switch_Pin;
+  /*Configure GPIO pin : Button_Pin */
+  GPIO_InitStruct.Pin = Button_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(Switch_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(Button_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
