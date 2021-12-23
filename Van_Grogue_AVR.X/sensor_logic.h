@@ -202,8 +202,8 @@ void sentido_de_giro()
 {
     //-----> Área do senstido de giro       
     static int u = 0;
-    static unsigned int PWMR = 140; // valor da força do motor em linha reta
-    static unsigned int PWM_Curva = 120; //PWM ao entrar na curva
+    static unsigned int PWMR = 100; // valor da força do motor em linha reta
+    static unsigned int PWM_Curva = 80; //PWM ao entrar na curva
     
     
     if ((sensores_frontais_atual[0] < 101 && sensores_frontais_atual[4] > 190) || (sensores_frontais_atual[0]  > 190 && sensores_frontais_atual[4] < 101))    
@@ -252,8 +252,8 @@ void volta_pra_pista(void)
       {
           
         giro_esquerda();
-        setDuty_1(PWMA);
-        setDuty_2(PWMB);
+        setDuty_1(PWM_RETURN);
+        setDuty_2(PWM_RETURN);
 
       }
     }
@@ -264,12 +264,14 @@ void volta_pra_pista(void)
       {
         
         giro_direita();
-        setDuty_1(PWMA);
-        setDuty_2(PWMB);
+        setDuty_1(PWM_RETURN);
+        setDuty_2(PWM_RETURN);
       }  
     }*/
     
-    if ((sensores_frontais_atual[4] > 190) && (sensores_frontais_atual[2] > 190))//saindo da pista, curva à esquerda
+    /*Estes valores variam se os sensores estão assimétricos ou não*/
+    /*Este algoritmo ficará mais simplificado quando usarmos sensores digitais*/
+    if ((sensores_frontais[2] > 190) && (sensores_frontais[4] > 190))//saindo da pista, curva à esquerda
     {
         giro_esquerda();
         setDuty_1(PWM_RETURN);    //utilizar variável fixa / define
@@ -277,7 +279,7 @@ void volta_pra_pista(void)
         
     }
     
-    else if((sensores_frontais_atual[0] > 190) && sensores_frontais_atual[2] > 190)
+    else if((sensores_frontais[0] < 190) && (sensores_frontais[2] > 190))
     {
         giro_direita();
         setDuty_1(PWM_RETURN);
