@@ -1,6 +1,7 @@
 /*Macros*/
 #define PWM_RETURN      80
 #define setpoint        0
+#define NOP() __asm__ __volatile__ ("nop")
 
 /*Variáveis externas*/
 extern char flag_curva;
@@ -156,10 +157,10 @@ void le_marcadores(void)
     
     s_curva =  tst_bit(leitura_curva, sensor_de_curva);     //lê valor do sensor de curva
     
-    /*for(int i = 0; i < 640; i++)    //40us
+    for(int i = 0; i < 16; i++)    //62,5ns cada NOP, 62,5*16 = 1000ns = 1us
     {
-        nop();
-    }*/
+        NOP();
+    }
     
     s_parada = tst_bit(leitura_parada, sensor_de_parada);   //lê valor do sensor de parada
     //leitura de marcador de parada

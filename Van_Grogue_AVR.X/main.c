@@ -22,7 +22,7 @@
 /*==============================================================*/
 
 /*Macros*/
-
+#define NOP() __asm__ __volatile__ ("nop")
 
 /*Variáveis globais*/
 unsigned int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
@@ -95,7 +95,6 @@ ISR(ADC_vect)
 int main(void) 
 {
     setup();
-
     while (1) loop();
     return 0;
 }//end main
@@ -170,8 +169,7 @@ void f_timers (void)
         f_timer5();
         c_timer5 = 0;
     }
-    
-    
+    _delay_loop_1(10);
     
 }//fim do RTOS
 
