@@ -16,7 +16,7 @@
 #include "Driver_motor.h"     //Biblioteca das funções de controle dos motores  //usado para ponte H tb6612fng
 #include "PID.h"              //Biblioteca do controle PID
 #include "sensor_logic.h"     //lógica utilizando os sensores
-#include "dados.h"            //biblioteca que contém as funções atraladas ao envio de informações via UART
+//#include "dados.h"            //biblioteca que contém as funções atraladas ao envio de informações via UART
 /*============================================================*/
 
 /*==============================================================*/
@@ -169,7 +169,6 @@ void f_timers (void)
         f_timer5();
         c_timer5 = 0;
     }
-    _delay_loop_1(10);
     
 }//fim do RTOS
 
@@ -416,7 +415,7 @@ void f_timer3(void)     //10ms
 
     else 
     {   
-        telemetria();
+        //telemetria();
         c_timer2 = 0;
     }
 }
@@ -433,6 +432,6 @@ void f_timer5(void)
 {
     if(!f_stop)
     {
-        coleta_de_dados();
+        //coleta_de_dados();
     }
 }
