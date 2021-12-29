@@ -204,10 +204,10 @@ def two_ray_model():
 
 
 def modelo_Okumura_Hata():
-    f = 2.5 * (10 ** 9)         ##2.5GHz
+    f = 2500     ##2.5GHz       ##freq colocada em MHz
     d = np.arange(1,10, 0.1)    ##até 20Km, unidade em Km
     hb = 30                     ##Altura da estação de base em m
-    hm = 30                     ##Altura da estação móvel em m
+    hm = 30                       ##Altura da estação móvel em m
     aHm = 0
     C = 0
 
@@ -222,9 +222,9 @@ def modelo_Okumura_Hata():
     if ambiente == 1:
         C = 0
         if f <= 200:
-            aHm = 8.29*(np.log10(1.54*hm)**2) - 1.11
+            aHm = 8.29*(np.log10(1.54*hm))**2 - 1.11
         else:
-            aHm = 3.2*(np.log10(11.75*hm)**2) - 4.97
+            aHm = 3.2*(np.log10(11.75*hm))**2 - 4.97
 
     elif ambiente == 2:
         C = 0
@@ -232,11 +232,11 @@ def modelo_Okumura_Hata():
 
     elif ambiente == 3:
         aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
-        C = -2*(np.log10(f/28)**2) - 5.4
+        C = -2*(np.log10(f/28))**2 - 5.4
 
     elif ambiente == 4:
         aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
-        C = -4.78*(np.log10(f)**2) + (18.33*np.log10(f)) - 40.98
+        C = -4.78*(np.log10(f))**2 + (18.33*np.log10(f)) - 40.98
 
 
     A = 69.55 + (26.16*np.log10(f)) - (13.82*np.log10(hb)) - aHm
@@ -258,10 +258,10 @@ def modelo_Okumura_Hata():
     plt.show()
 
 def Hata_modified():
-    f = 2.5 * (10 ** 9)             ##2.5GHz
+    f = 2500                        ##freq. em MHz
     hb = 30                         ##Altura da estação de base em m
     hm = 30                         ##Altura da estação móvel em m
-    d = np.arange(0.12,1, 0.001)    ##varredura de 1km
+    d = np.arange(0.12,10, 0.001)    ##varredura de 1km
  
     Pt_dB = 16.02                   ##Potência de transmissão
     Gt_dBi = 0                      ##ganho de transmissão
@@ -312,8 +312,8 @@ def Hata_modified():
 
 
 def modelo_Okumura_Hata_Davidson():
-    f = 2.5 * (10 ** 9)         ##2.5GHz
-    d = np.arange(1,20, 0.1)    ##até 20, unidade em km
+    f = 2500                    ##freq. em MHz, 2500MHz = 2.5GHz
+    d = np.arange(1,10, 0.1)    ##até 20, unidade em km
     hb = 30                     ##Altura da estação de base em m
     hm = 30                     ##Altura da estação móvel em m
    
@@ -354,8 +354,8 @@ def modelo_Okumura_Hata_Davidson():
 
 def modelo_Okumura_Hata_Cost_231():
 
-    f = 2.5 * (10 ** 9)         ##2.5GHz
-    d = np.arange(1,20, 0.1)    ##até 20, unidade em km
+    f = 2500                    ##freq. em MHz
+    d = np.arange(1,10, 0.1)    ##até 20, unidade em km
     hb = 30                     ##Altura da estação de base em m
     hm = 30                     ##Altura da estação móvel em m
    
@@ -366,25 +366,29 @@ def modelo_Okumura_Hata_Cost_231():
     L_50 = 0
     L_50_urbano = 0
 
-    if hm <= 10 or hm >= 1:
-        aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
+    aHm = 0
 
-    if f <= 200*10**6:
-        aHm = (8.29*(np.log10(1.54*hm)**2) - 1.1)
+    regiao = int(input("Determine o Local:\n1 - Pequenas e médias cidades\n2 - Cidades grandes\n\n"))
+
+    if regiao == 1:
+        if hm <= 10 or hm >= 1:
+            aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
+
+    if regiao == 2:
+        if f <= 200*10**6:
+            aHm = (8.29*(np.log10(1.54*hm)**2) - 1.1)
     
-    elif f >= 400*10**6:
-        aHm = (3.2*(np.log10(11.75*hm)**2) - 4.97)
-
-
+        elif f >= 400*10**6:
+            aHm = (3.2*(np.log10(11.75*hm)**2) - 4.97)
+    
     L_50_urbano = 46.3 + 33.9*np.log10(f) - 13.82*np.log10(hb) - aHm 
-    + CM
     
     option = int(input("Urbana - 1\nSuburbana - 2\nÁrea rural - 3\n"))
 
 
     if option == 1:
         CM = 3
-        L_50 = L_50_urbano
+        L_50 = L_50_urbano + CM
 
     elif option == 2:
         L_50 = L_50_urbano - 2*(np.log10(f/28)**2) - 5.4
@@ -393,7 +397,7 @@ def modelo_Okumura_Hata_Cost_231():
         L_50 = L_50_urbano - 4.78*(np.log10(f)**2) + 18.33*np.log10(f) - 40.94
 
 
-    L_50 += + (44.9 - 6.55*np.log10(hb))*np.log10(d)
+    L_50 +=  (44.9 - 6.55*np.log10(hb))*np.log10(d)
 
     if L_50.all() < 0:
         PL = Gt_dBi + Pt_dB + L_50
