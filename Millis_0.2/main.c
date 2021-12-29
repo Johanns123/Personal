@@ -30,8 +30,6 @@ volatile char flag_com = 0; //flag que indica se houve recepção de dado*/
 unsigned char max_timer1, max_timer2, max_timer3_ms, max_timer_3, max_timer4, max_timer5;   
 
 
-int  u_X = 0;
-
 /*Interrupções*/
 ISR(USART_RX_vect) {
     ch = UDR0; //Faz a leitura do buffer da serial
