@@ -63,7 +63,6 @@ void sensors_le_marcadores(void)
 
     //Utilizar as leituras numa função e guradá-los num char e seus últimos valores realizar
     //uma comparação para ver a condição em que o robô está
-    
     s_parada = (tst_bit(leitura_sensores, sensor_de_parada) >> sensor_de_parada);   //lê valor do sensor de parada
     //leitura de marcador de parada
     
@@ -105,159 +104,113 @@ void sensors_sentido_de_giro()
      //O erro final precisa ser melhorado (acompanhar o relatório da trinca)
     extern unsigned int PWMA, PWMB;
     //-----> Área do senstido de giro       
-    static int u_W = 0;
-    static unsigned int PWMR = 100; // valor da força do motor em linha reta
-    static unsigned int PWM_Curva = 80; //PWM ao entrar na curva
-    extern int u_X;
+    static int u_W = 0;                     //resultado do PID rotacional
+    static unsigned int PWMR = 100;         // valor da força do motor em linha reta
+    static unsigned int PWM_Curva = 80;     //PWM ao entrar na curva
+    static unsigned int PWM_general = 0;
+    static int  u_X = 0;                    //resultado do PID translacional
     
-    static int erro_enc = 0, erroX = 0, speedX;
-    extern char pulse_numberL, pulse_numberR;
+    static int erro_enc = 0, erroX = 0, speedX;     //speedX é o setpoint da vel. desejada
+    extern char pulse_numberL, pulse_numberR;            //numero de pulsos do dois encoders
     
-    erro_enc = pulse_numberR - pulse_numberL;
+    erro_enc = pulse_numberR + pulse_numberL;            //variação entro os dois enconders
         
-    
-    static int erro_sensores = 0, erroW = 0, speedW = 0;
+    static int erro_sensores = 0, erroW = 0, speedW = 0;  //speeW é o setpoint do PID rotacional.
     speedX = 100;   //velocidade/pwm desejado
     
-    sensores_frontais = PINC & 0b0011111;   //apago somente os 2 bits mais significativos
+    sensores_frontais = PINC & 0b00011111;   //apago somente os 2 bits mais significativos
+                                            //para ler os 5 LSBs
+    sensors_leitura_de_pista(&erro_sensores, &speedW, &speedX, &PWM_general, &PWMR, &PWM_Curva);
     
-    
-    switch (sensores_frontais)
-    {
-        case 0 :    //cruzamento
-            erro_sensores = 0;
-            speedW = 0;
-            erroX = speedX - erro_enc;
-            erroW = speedW - erro_sensores;
-            u_X = PID_encoder(erroX);
-            u_W = PID(erroW);
-            PWMA = PWMR + u_W + u_X;
-            PWMB = PWMR - u_W + u_X;
-            motores_frente();
-            break;
-        
-        case 3 :
-            erro_sensores = 4;
-            erroX = speedX - erro_enc;
-            erroW = speedW - erro_sensores;
-            u_X = PID_encoder(erroX);
-            u_W = PID(erroW);
-            PWMA = PWMR + u_W + u_X;
-            PWMB = PWMR - u_W + u_X;
-            motores_frente();
-            break;
-         
-        case 7 :
-            erro_sensores = 6;
-            erroX = speedX - erro_enc;
-            erroW = speedW - erro_sensores;
-            u_X = PID_encoder(erroX);
-            u_W = PID(erroW);
-            PWMA = PWM_Curva + u_W + u_X;
-            PWMB = PWM_Curva - u_W + u_X;
-            motores_frente();
-            break;
-            
-        case 14 :
-            erro_sensores = 8;
-            speedX = 0;
-            motores_giro_esquerda();
-            erroX = speedX - erro_enc;
-            erroW = speedW - erro_sensores;
-            u_X = PID_encoder(erroX);
-            u_W = PID(erroW);
-            PWMA = PWMR + u_W + u_X;
-            PWMB = PWMR - u_W + u_X;
-            break;
-           
-        case 17 :
-            erro_sensores = 0;
-            speedW = 0;
-            erroX = speedX - erro_enc;
-            erroW = speedW - erro_sensores;
-            u_X = PID_encoder(erroX);
-            u_W = PID(erroW);
-            PWMA = PWMR + u_W + u_X;
-            PWMB = PWMR - u_W + u_X;
-            motores_frente();
-            break;
-        
-        case 19 :
-            erro_sensores = 2;
-            erroX = speedX - erro_enc;
-            erroW = speedW - erro_sensores;
-            u_X = PID_encoder(erroX);
-            u_W = PID(erroW);
-            PWMA = PWMR + u_W + u_X;
-            PWMB = PWMR - u_W + u_X;
-            motores_frente();
-            break;
-            
-        case 24 :
-            erro_sensores = -4;
-            erroX = speedX - erro_enc;
-            erroW = speedW - erro_sensores;
-            u_X = PID_encoder(erroX);
-            u_W = PID(erroW);
-            PWMA = PWMR + u_W + u_X;
-            PWMB = PWMR - u_W + u_X;
-            motores_frente();
-            break;
-         
-        case 25 :
-            erro_sensores = -2;
-            erroX = speedX - erro_enc;
-            erroW = speedW - erro_sensores;
-            u_X = PID_encoder(erroX);
-            u_W = PID(erroW);
-            PWMA = PWMR + u_W + u_X;
-            PWMB = PWMR - u_W + u_X;
-            motores_frente();
-            break;
-            
-        case 27 :
-            erro_sensores = 0;
-            speedW = 0;
-            erroX = speedX - erro_enc;
-            erroW = speedW - erro_sensores;
-            u_X = PID_encoder(erroX);
-            u_W = PID(erroW);
-            PWMA = PWMR + u_W + u_X;
-            PWMB = PWMR - u_W + u_X;
-            motores_frente();
-            break;
-            
-        case 28 :
-            erro_sensores = -6;
-            speedX = 0;
-            erroX = speedX - erro_enc;
-            erroW = speedW - erro_sensores;
-            u_X = PID_encoder(erroX);
-            u_W = PID(erroW);
-            PWMA = PWM_Curva + u_W + u_X;
-            PWMB = PWM_Curva - u_W + u_X;
-            motores_frente();
-            break;
-            
-        case 30 :
-            erro_sensores = -8;
-            speedX = 0;
-            motores_giro_direita();
-            erroX = speedX - erro_enc;
-            erroW = speedW - erro_sensores;
-            u_X = PID_encoder(erroX);
-            u_W = PID(erroW);
-            PWMA = PWMR + u_W + u_X;
-            PWMB = PWMR - u_W + u_X; 
-            break;      
-    }
+    erroX = speedX - erro_enc;
+    erroW = speedW - erro_sensores;
+    u_X = PID_encoder(erroX);
+    u_W = PID(erroW);
+    PWMA = PWM_general + u_W + u_X;
+    PWMB = PWM_general - u_W + u_X;
     PWM_limit();
     PWM_setDuty_1(PWMA);
     PWM_setDuty_2(PWMB);
 
 }
 
-
+void sensors_leitura_de_pista(int *erro_sensores, int *speedW, int *speedX, unsigned int *PWM_general, unsigned int *PWMR, unsigned int *PWM_Curva)
+{
+    switch (sensores_frontais)
+    {
+        case 0 :    //cruzamento
+            *erro_sensores = 0;
+            *speedW = 0;                 //em uma reta ou cruzamento o rotacional é zero
+            *PWM_general = *PWMR;
+            motores_frente();
+            break;
+        
+        case 3 :
+            *erro_sensores = 4;
+            *PWM_general = *PWMR;
+            motores_frente();
+            break;
+         
+        case 7 :
+            *erro_sensores = 6;
+            *PWM_general = *PWM_Curva;
+            motores_frente();
+            break;
+            
+        case 14 :                       //volta pra pista, gira em torno do próprio eixo
+            *erro_sensores = 8;
+            *speedX = 0;
+            *PWM_general = *PWMR;
+            motores_giro_direita();
+            break;
+           
+        case 17 :
+            *erro_sensores = 0;
+            *speedW = 0;
+            *PWM_general = *PWMR;
+            motores_frente();
+            break;
+        
+        case 19 :
+            *erro_sensores = 2;
+            *PWM_general = *PWMR;
+            motores_frente();
+            break;
+            
+        case 24 :
+            *erro_sensores = -4;
+            *PWM_general = *PWMR;
+            motores_frente();
+            break;
+         
+        case 25 :
+            *erro_sensores = -2;
+            *PWM_general = *PWMR;
+            motores_frente();
+            break;
+            
+        case 27 :
+            *erro_sensores = 0;
+            *speedW = 0;
+            *PWM_general = *PWMR;
+            motores_frente();
+            break;
+            
+        case 28 :
+            *erro_sensores = -6;
+            *speedX = 0;
+            *PWM_general = *PWM_Curva;
+            motores_frente();
+            break;
+            
+        case 30 :                   //volta pra pista, gira em torno do próprio eixo
+            *erro_sensores = -8;
+            *speedX = 0;
+            *PWM_general = *PWMR; 
+            motores_giro_esquerda();
+            break;      
+    }
+}
 /*void sensors_volta_pra_pista(void)
 {    
     
