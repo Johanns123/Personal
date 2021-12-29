@@ -9,20 +9,20 @@
 #include "dados.h"            //biblioteca que cont√©m as fun√ß√µes atraladas ao envio de informa√ß√µes via UART
 #include "HAL_atmega328p.h"
 
-/*Prot√≥tipo das fun√ß√µes*/
+/*ProtÛtipo das funÁıes*/
 void setup();
-void setup_logica();        //vari√°veis utilizadas na l√≥gica
+void setup_logica();        //vari·veis utilizadas na lÛgica
 void loop();
-void estrategia();          //estrategia do rob√¥
+void estrategia();          //estrategia do robo
 //---------------------------------------------------------------//
 void parada();              //Leitura dos sensores laterais
-void fim_de_pista();        //verifica se √© o fim da pista 
+void fim_de_pista();        //verifica se È o fim da pista 
 //---------------------------------------------------------------------//
 void count_pulsesE();
 void count_pulsesD();
 void millis(void);
 //---------------------------------------------------------------------//
-void f_timers (void);       //fun√ß√£o de temporiza√ß√£o das rotinas
+void f_timers (void);       //funÁ„o de temporizaÁ„o das rotinas
 void f_timer1(void);
 void f_timer2(void);
 void f_timer3(void);
