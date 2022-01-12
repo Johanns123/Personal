@@ -2,13 +2,17 @@
  * @Author: johannamorim
  * @Date:   2021-07-01T20:56:35-03:00
  * @Last modified by:   johannamorim
- * @Last modified time: 2021-08-15T21:02:55-03:00
+ * @Last modified time: 2022-04-01-16:49
  */
 
-// Versão 0.0.1
+// Versão 0.0.2
 
 /*Bug fixes:
-  - Reduziu o número de repetições de nomes no mesmo dia de semana*/
+  -Não há mais repetições de nomes na mesma semana*/
+
+
+//melhorias futuras: Deixar o código mais organizado e reduzir o número de V. globais
+
 
 /*Bibliotecas*/
 #include <stdio.h>
@@ -397,10 +401,11 @@ int sorteio_de_nomes(int j, int num)
 void escreve_nomes(int num, char opt)
 {
     static char *linha0 [10] = {0};     //vetores de string para comparação entre as designações de dias da semana iguais mas em semanas diferentes
-    static char *linha1 [10] = {0};
     static char *linha2 [10] = {0};
-    static char *linha3 [10] = {0};
     static char *linha4 [10] = {0};
+    static char *linha1 [10] = {0};     //vetores de string para comparação entre as designações de dias da semana iguais mas em semanas diferentes
+    static char *linha3 [10] = {0};
+    static char *linha5 [10] = {0};
 
     static int indice = 0;
 
@@ -427,7 +432,7 @@ void escreve_nomes(int num, char opt)
             linha2 [j] = nomes[numero_aleatorio];
             if(linha2 [j] == linha0[j])
             {
-                printf("linha1: %s\t%s\n", linha0[j], linha2[j]);
+                printf("linha0: %s\tlinha2: %s\n", linha0[j], linha2[j]);
                 numero_aleatorio = sorteio_de_nomes(j, num);
                 linha2 [j] = nomes[numero_aleatorio];
             }
@@ -438,13 +443,39 @@ void escreve_nomes(int num, char opt)
             linha4 [j] = nomes[numero_aleatorio];
             if(linha4 [j] == linha2[j])
             {
-                printf("linha2: %s\t%s\n", linha4[j], linha2[j]);
+                printf("linha4: %s\tlinha2:%s\n", linha4[j], linha2[j]);
                 numero_aleatorio = sorteio_de_nomes(j, num);
                 linha4 [j] = nomes[numero_aleatorio];
             }
         }
 
+        if(indice == 1)
+        {
+            linha0 [j] = nomes[numero_aleatorio];
+        }
 
+
+        if(indice == 3)
+        {
+            linha3 [j] = nomes[numero_aleatorio];
+            if(linha3 [j] == linha1[j])
+            {
+                printf("linha3: %s\tlinha1: %s\n", linha3[j], linha1[j]);
+                numero_aleatorio = sorteio_de_nomes(j, num);
+                linha3 [j] = nomes[numero_aleatorio];
+            }
+        }
+
+        if(indice == 5)
+        {
+            linha5 [j] = nomes[numero_aleatorio];
+            if(linha5 [j] == linha3[j])
+            {
+                printf("linha5: %s\tlinha3: %s\n", linha5[j], linha3[j]);
+                numero_aleatorio = sorteio_de_nomes(j, num);
+                linha5 [j] = nomes[numero_aleatorio];
+            }
+        }
 
         fprintf(file, "%10s,", nomes[numero_aleatorio]);
     
@@ -452,7 +483,7 @@ void escreve_nomes(int num, char opt)
 
     indice++;   //depois que é feito a impressão de uma linha
 
-    if(indice > 3)  indice = 0;
+    if(indice > 6)  indice = 0; //reinicio a análise dos ídices
 
 }
 
