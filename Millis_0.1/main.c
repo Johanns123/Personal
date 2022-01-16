@@ -385,7 +385,7 @@ void millis(void)
 void f_timer1(void)
 {
     parada();
-    fim_de_pista();         //Verifica se é o fim da pista
+    //fim_de_pista();         //Verifica se é o fim da pista
 }
 
 void f_timer2(void)
