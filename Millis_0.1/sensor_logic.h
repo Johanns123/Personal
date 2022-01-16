@@ -157,10 +157,10 @@ void le_marcadores(void)
     
     s_curva =  tst_bit(leitura_curva, sensor_de_curva);     //lê valor do sensor de curva
     
-    for(int i = 0; i < 16; i++)    //62,5ns cada NOP, 62,5*16 = 1000ns = 1us
+    /*for(int i = 0; i < 16; i++)    //62,5ns cada NOP, 62,5*16 = 1000ns = 1us
     {
         NOP();
-    }
+    }*/
     
     s_parada = tst_bit(leitura_parada, sensor_de_parada);   //lê valor do sensor de parada
     //leitura de marcador de parada
@@ -202,7 +202,7 @@ void sentido_de_giro()
 {
     //-----> Área do senstido de giro       
     static int u = 0;
-    static unsigned int PWMR = 100; // valor da força do motor em linha reta
+    static unsigned int PWMR = 200; // valor da força do motor em linha reta
     static unsigned int PWM_Curva = 80; //PWM ao entrar na curva
     
     
