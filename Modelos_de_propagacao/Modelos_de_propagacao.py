@@ -115,7 +115,7 @@ def log_normal():
 
     Gt_dBi = 0            ##ganho de transmissão
     Gr_dBi = 5.15         ##ganho de recpeção
-    f = 2.5 * (10 ** 9)   ##2.5GHz
+    f = 28 * (10 ** 9)   ##2.5GHz
 
     d0 = 1      ##distância de referência de 1m
        
@@ -204,7 +204,7 @@ def two_ray_model():
 
 
 def modelo_Okumura_Hata():
-    f = 2500     ##2.5GHz       ##freq colocada em MHz
+    f = 28000     ##28GHz       ##freq colocada em MHz
     d = np.arange(1,10, 0.1)    ##até 20Km, unidade em Km
     hb = 30                     ##Altura da estação de base em m
     hm = 30                       ##Altura da estação móvel em m
@@ -258,7 +258,7 @@ def modelo_Okumura_Hata():
     plt.show()
 
 def Hata_modified():
-    f = 2500                        ##freq. em MHz
+    f = 28000                        ##freq. em MHz
     hb = 30                         ##Altura da estação de base em m
     hm = 30                         ##Altura da estação móvel em m
     d = np.arange(0.12,10, 0.001)    ##varredura de 1km
@@ -312,7 +312,7 @@ def Hata_modified():
 
 
 def modelo_Okumura_Hata_Davidson():
-    f = 2500                    ##freq. em MHz, 2500MHz = 2.5GHz
+    f = 28000                    ##freq. em MHz, 2500MHz = 2.5GHz
     d = np.arange(1,10, 0.1)    ##até 20, unidade em km
     hb = 30                     ##Altura da estação de base em m
     hm = 30                     ##Altura da estação móvel em m
@@ -354,7 +354,7 @@ def modelo_Okumura_Hata_Davidson():
 
 def modelo_Okumura_Hata_Cost_231():
 
-    f = 2500                    ##freq. em MHz
+    f = 28000                    ##freq. em MHz
     d = np.arange(1,10, 0.1)    ##até 20, unidade em km
     hb = 30                     ##Altura da estação de base em m
     hm = 30                     ##Altura da estação móvel em m
