@@ -19,6 +19,11 @@ bool flag_curva = 0;    //cronometragem entre as retas e as cruvas
 bool flag_parada = 0;   //inicia e encerra a cronometragem da pista
 bool f_stop = 0;              //encerra a rotina de dados
 unsigned int millisegundos = 0;        //millisegundos
+unsigned char vect_duty_cycle[101];
+unsigned int vect_PWM[512];
+
+unsigned char SW;   //switch de estratégia
+unsigned char estrategia = 0;
 
 /*Variáveis do encoder*/
 unsigned char pulse_numberR = 0, pulse_numberL = 0; //variáveis para contagem dos pulsos dos encoders
@@ -75,7 +80,7 @@ int main(void)
 /*RTOS primitivo*/
 
 /*Parte não visível ao usuário*/
-void f_timers (void) 
+void f_timers (void)//100us 
 {
     static unsigned char c_timer1 = 1;
     static unsigned char c_timer2 = 1;
@@ -83,9 +88,8 @@ void f_timers (void)
     static unsigned char c_timer4 = 1;
     static unsigned char c_timer5 = 1;
         
-    
     //funções a cada 200us
-    if(c_timer1 < max_timer1)      //tempo que quer menos 1
+    if(c_timer1 < max_timer1)
     {
         c_timer1++;
     }
@@ -97,7 +101,7 @@ void f_timers (void)
     }
 
     /*300us*/
-    if (c_timer2 < max_timer2)   //o 0 conta na contagem -> 3-1
+    if (c_timer2 < max_timer2)
     {
         c_timer2++; //100us -1; 200us-2;300 us-3; 300us de intervalo de tempo
     }
@@ -152,7 +156,7 @@ void setup()
 
     setup_Hardware();   //setup das IO's e das interrupções
     sei();              //Habilita as interrupções
-    setup_logica();     //definição das variáveis lógicas(vazio por enquanto)
+    setup_logica();     //definição das variáveis lógicas
 
 }//end setup
 
@@ -164,6 +168,28 @@ void setup_logica() /*Função que passa ponteiros para funções como parâm*/
     max_timer_3 = 50, 
     max_timer4 = 10,
     max_timer5 = 10;   
+    
+    /*Conversão de PWM para duty*/
+    for(int i = 0; i < 101; i++)
+    {
+        vect_duty_cycle[i] = i*(511/100);
+    }
+    
+    /*Conversão de duty para PWM*/
+    for(int j = 0; j < 512; j++)
+    {
+        vect_PWM[j] = j*(100/511);
+    }
+    
+    if(!SW)
+    {
+        estrategia = 1; //tomada de tempo
+    }
+    
+    else
+    {
+        estrategia = 0; //mapeamento
+    }
 }
 
 
@@ -172,7 +198,7 @@ void loop()//loop vazio
 
 }
 
-void estrategia()
+void estrategia1()
 {
 
     if (!f_parada)  //se f_parada for 0... 
@@ -181,6 +207,11 @@ void estrategia()
         sensors_sentido_de_giro();      //Verifica se precisa fazer uma curva e o cálculo do PID
         //sensors_volta_pra_pista();      //corrige o robô caso saia da linha
     } 
+}
+
+void estrategia2()
+{
+    
 }
 
 
@@ -251,7 +282,7 @@ void count_pulsesE()
 
     Encoder_C1Last = Lstate;
 
-    if (!direction_m) pulse_numberR++; //sentido horário
+    if (!direction_m) pulse_numberL++; //sentido horário
     else pulse_numberL--; //sentido anti-horário
 }
 
@@ -264,15 +295,23 @@ void millis(void)
     millisegundos++;
 }
 
-void f_timer1(void)
+void f_timer1(void) //200us
 {
     parada();
     fim_de_pista();         //Verifica se é o fim da pista
 }
 
-void f_timer2(void)
+void f_timer2(void) //300us
 {
-    estrategia();
+    if(estrategia)
+    {
+        estrategia1();
+    }
+    
+    else
+    {
+        estrategia2();
+    }
 }
 
 void f_timer3(void)     //10ms
@@ -286,7 +325,10 @@ void f_timer3(void)     //10ms
 
     else 
     {   
-        //dados_telemetria();
+        if(!estrategia)
+        {
+            //dados_telemetria();
+        }
         c_timer1 = 1;
     }
 }
@@ -300,7 +342,10 @@ void f_timer4(void)
 void f_timer5(void)
 {
     if(!f_stop)
-    {
-        //dados_coleta();
+    {   
+        if(!estrategia)
+        {   
+            //dados_coleta();
+        }
     }
 }
