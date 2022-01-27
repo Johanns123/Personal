@@ -30,7 +30,7 @@ extern void UART_config(unsigned int ubrr);
 /*===========================================================================*/
 
 
-void setup_Hardware()
+/*void setup_Hardware()
 {
     MCUCR &= 0xef;      //habilita pull up quando configurado e desabilita algumas configurações prévias do MCU
 
@@ -59,4 +59,4 @@ void INT_INIT()
     TCCR0B = 0b00000010; //TC0 com prescaler de 8
     TCNT0 = 56; //Inicia a contagem em 56 para, no final, gerar 100us
     TIMSK0 = 0b00000001; //habilita a interrupção do TC0
-}
+}*/
