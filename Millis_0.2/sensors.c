@@ -12,7 +12,7 @@
 
 unsigned char sensores_de_tensao [2];
 unsigned char v_bat;                 // Tensão na bateria
-unsigned char SW;                    // Switch de estratégias
+extern unsigned char SW;                    // Switch de estratégias
 unsigned char sensores_frontais = 0;
 
 // =============================================================================================
@@ -137,9 +137,9 @@ void sensors_sentido_de_giro()
     extern char pulse_numberL, pulse_numberR;               // numero de pulsos do dois encoders       
     static int  erro_sensores = 0, erroW = 0, speedW = 0;   // speeW é o setpoint do PID rotacional.
     
-    PWMR        = calc_pwm(10);  // duty: 10%
-    PWM_Curva   = calc_pwm( 8);  // duty:  8%    
-    PWM_general = calc_pwm( 0);  // duty:  0% 
+    PWMR        = PWM_calc_pwm(10);  // duty: 10%
+    PWM_Curva   = PWM_calc_pwm( 8);  // duty:  8%    
+    PWM_general = PWM_calc_pwm( 0);  // duty:  0% 
     
     speedX = 100;   // Velocidade/PWM desejado
     
@@ -175,8 +175,8 @@ void sensors_sentido_de_giro()
     PWM_setDuty_1(PWMA);            // Envia o valor de PWM calculado para o motor_1
     PWM_setDuty_2(PWMB);            // Envia o valor de PWM calculado para o motor_2
     
-    calc_duty(PWMA);                // Converte o valor de PWMA atual para duty_cycle_A
-    calc_duty(PWMB);                // Converte o valor de PWMB atual para duty_cycle_B
+    //PWM_calc_duty(PWMA);                // Converte o valor de PWMA atual para duty_cycle_A
+    //PWM_calc_duty(PWMB);                // Converte o valor de PWMB atual para duty_cycle_B
     
     /* Há dois PIDs presentes, o translacional(u_X) e o rotacional(u_W),
      * ambos os setpoints variam dependendo da situação que o robô se enconrtra
