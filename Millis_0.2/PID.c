@@ -30,8 +30,8 @@ int PID(int error) /* Algoritmo de controle PID usando os sensores frontais */
     d = (Kd * (error - erroAnterior)); // Derivada
     
     erroAnterior = error;
-
-    PID = (p + i + d) >> prescale; // Divisão: (p + i + d) / prescale
+    
+    PID = (p + i + d) >> prescale; // Divisão: (p + i + d) / 2^prescale
     
     return PID; // retorna o valor do cálculo do PID
 
