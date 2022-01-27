@@ -6,5 +6,5 @@ void PWM_setFreq  (char option);
 
 void PWM_limit();
 
-char calc_duty(int  pwm);
-int  calc_pwm (char duty_cycle);
+unsigned char PWM_calc_duty(unsigned int  pwm);
+unsigned int  PWM_calc_pwm (unsigned char duty_cycle);
