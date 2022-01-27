@@ -13,7 +13,8 @@
 void setup();
 void setup_logica();        //variáveis utilizadas na lógica
 void loop();
-void estrategia();          //estrategia do robô
+void estrategia1();          //estrategia de tomada de tempo
+void estrategia2();          //estrategia de mapeamento
 //---------------------------------------------------------------//
 void parada();              //Leitura dos sensores laterais
 void fim_de_pista();        //verifica se é o fim da pista 
