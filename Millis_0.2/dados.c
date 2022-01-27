@@ -59,9 +59,6 @@ unsigned int dados_calculo_do_raio() //esta função calcula o raio a partir da di
         raio_f = 0;
     }
         
-        /*sprintf(buffer, "Raio %5d\n", raio_f); //Converte para string
-        UART_enviaString(buffer); //Envia para o computador
-        UART_enviaCaractere(0x0D); //pula linha*/
  
 
     return raio_f;
@@ -94,8 +91,7 @@ void dados_envia()
         {
             for(int coluna = 0; coluna < 3; coluna++)
             {
-                sprintf(buffer, "%d\t", matriz_telemetria[linha][coluna]);
-                UART_enviaString(buffer);
+                UART_enviaHex(matriz_telemetria[linha][coluna]);
             }
             UART_enviaCaractere('\n');
         }  
@@ -108,8 +104,7 @@ void dados_envia()
         {
             for(int coluna = 0; coluna < 3; coluna++)
             {
-                sprintf(buffer, "%d\t", matriz_pista[linha][coluna]);
-                UART_enviaString(buffer);
+                UART_enviaHex(matriz_pista[linha][coluna]);
             }
             UART_enviaCaractere('\n');
         }  
@@ -137,11 +132,7 @@ void dados_coleta(void)
             matriz_pista[i][tempo]      = millisegundos;             //tempo em milissegundos
             matriz_pista[i][distancia]  = dados_distancia_calculo();  //distância em mm
             matriz_pista[i][raio]       = dados_calculo_do_raio();    //raio em mm 
-            //sprintf(buffer, "%dms\t", millis());
-            //UART_enviaString(buffer);
-            millisegundos = 0;                  //zerando o timer
-            //sprintf(buffer, "%.2fmm\t", distancia_calculo());  //distância em milímetros
-            //UART_enviaString(buffer);
+            millisegundos = 0;                  //zerando o timer;
             f_dados_c = 1;
             dados_envia();
             f_record = 1;                     //flag para gravar uma vez
@@ -157,11 +148,7 @@ void dados_coleta(void)
         {
             matriz_pista[i][tempo]      = millisegundos;
             matriz_pista[i][distancia]  = dados_distancia_calculo();
-            //sprintf(buffer, "%dms\t", millis());
-            //UART_enviaString(buffer);
             millisegundos = 0;                  //zerando o timer
-            //sprintf(buffer, "%.2fmm\t", distancia_calculo());  //distância em milímetros
-            //UART_enviaString(buffer);
             flag_parada = 0;
             f_stop = 1;
         }
