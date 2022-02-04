@@ -123,23 +123,21 @@ void sensors_sentido_de_giro()
     /* O erro final precisa ser melhorado (acompanhar o relatório da trinca) */
     
     extern unsigned int PWMA, PWMB;
-    
+    extern unsigned int PWMR;                               // PWM do motor ao entrar na reta
+    extern unsigned int PWM_Curva;                          // PWM do motor ao entrar na curva
     // ---> Área do senstido de giro <---
     
     static          int u_W = 0;                            // resultado do PID rotacional
     static          int u_X = 0;                            // resultado do PID translacional
     
-    static unsigned int PWMR;                               // PWM do motor ao entrar na reta
-    static unsigned int PWM_Curva;                          // PWM do motor ao entrar na curva
-    static unsigned int PWM_general;
+
+    static unsigned int PWM_general = 0;
        
     static int  delta_enc = 0, erroX = 0, speedX;           // speedX é o setpoint da vel. desejada
     extern char pulse_numberL, pulse_numberR;               // numero de pulsos do dois encoders       
     static int  erro_sensores = 0, erroW = 0, speedW = 0;   // speeW é o setpoint do PID rotacional.
     
-    PWMR        = PWM_calc_pwm(10);  // duty: 10%
-    PWM_Curva   = PWM_calc_pwm( 8);  // duty:  8%    
-    PWM_general = PWM_calc_pwm( 0);  // duty:  0% 
+    
     
     speedX = 100;   // Velocidade/PWM desejado
     
@@ -272,27 +270,3 @@ void sensors_frontais(int *erro_sensores, int *speedW, int *speedX, unsigned int
             break;      
     }
 }
-/*void sensors_volta_pra_pista(void)
-{    
-    
-
-    if (sensores_frontais == 14)//saindo da pista, curva à esquerda
-    {
-        motores_giro_esquerda();
-        PWM_setDuty_1(PWM_RETURN);    //utilizar variável fixa / define
-        PWM_setDuty_2(PWM_RETURN); 
-        
-    }
-    
-    else if(sensores_frontais == 30)
-    {
-        motores_giro_direita();
-        PWM_setDuty_1(PWM_RETURN);
-        PWM_setDuty_2(PWM_RETURN); 
-    }
-    
-
-}*/
-
-
-
