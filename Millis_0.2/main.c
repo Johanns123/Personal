@@ -12,6 +12,8 @@
 
 /*Variáveis globais*/
 unsigned int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
+unsigned int PWMR;                               // PWM do motor ao entrar na reta
+unsigned int PWM_Curva;                          // PWM do motor ao entrar na curva
 //variáveis de controle
 bool f_parada= 0;       //variável que comanda quando o robô deve parar e não realizar mais sua rotina
 bool flag = 0;          //variável de controle para identificar o momento de parada
@@ -136,7 +138,7 @@ void f_timers (void)//100us
         c_timer4 = 1;
     }
     
-    if(c_timer5 < max_timer5)   //1000us
+    if(c_timer5 < max_timer5)   //1ms
     {
         c_timer5++;
     }
@@ -162,6 +164,8 @@ void setup()
 
 void setup_logica() /*Função que passa ponteiros para funções como parâm*/
 {
+    
+    
     max_timer1 = 2,
     max_timer2 = 3,
     max_timer3_ms = 100,
@@ -184,11 +188,15 @@ void setup_logica() /*Função que passa ponteiros para funções como parâm*/
     if(!SW)
     {
         estrategia = 1; //tomada de tempo
+        PWMR        = PWM_calc_pwm(40);  // duty: 40%
+        PWM_Curva   = PWM_calc_pwm(30);  // duty: 30%    
     }
     
     else
     {
         estrategia = 0; //mapeamento
+        PWMR        = PWM_calc_pwm(10);  // duty: 10%
+        PWM_Curva   = PWM_calc_pwm( 8);  // duty: 8%
     }
 }
 
@@ -198,20 +206,22 @@ void loop()//loop vazio
 
 }
 
-void estrategia1()
+void tomada_de_tempo()
 {
 
     if (!f_parada)  //se f_parada for 0... 
     {
-        //sensors_sensores();             //seta o limiar da leitura dos sensores
         sensors_sentido_de_giro();      //Verifica se precisa fazer uma curva e o cálculo do PID
-        //sensors_volta_pra_pista();      //corrige o robô caso saia da linha
+        Running_Torricielli();
     } 
 }
 
-void estrategia2()
+void mapeamento()
 {
-    
+    if (f_parada)  //se f_parada for 1... 
+    {
+        sensors_sentido_de_giro();      //Verifica se precisa fazer uma curva e o cálculo do PID
+    } 
 }
 
 
@@ -305,12 +315,12 @@ void f_timer2(void) //300us
 {
     if(estrategia)
     {
-        estrategia1();
+        tomada_de_tempo();
     }
     
     else
     {
-        estrategia2();
+        mapeamento();
     }
 }
 
@@ -327,7 +337,7 @@ void f_timer3(void)     //10ms
     {   
         if(!estrategia)
         {
-            //dados_telemetria();
+            dados_telemetria(); //mapeamento
         }
         c_timer1 = 1;
     }
@@ -343,9 +353,9 @@ void f_timer5(void)
 {
     if(!f_stop)
     {   
-        if(!estrategia)
+        if(!estrategia) //mapeamento
         {   
-            //dados_coleta();
+            dados_coleta();
         }
     }
 }
