@@ -8,13 +8,14 @@
 #include "sensors.h"     //lógica utilizando os sensores
 #include "dados.h"            //biblioteca que contém as funções atraladas ao envio de informações via UART
 #include "HAL_atmega328p.h"
+#include "Running.h"
 
 /*Protótipo das funções*/
 void setup();
 void setup_logica();        //variáveis utilizadas na lógica
 void loop();
-void estrategia1();          //estrategia de tomada de tempo
-void estrategia2();          //estrategia de mapeamento
+void tomada_de_tempo();          //estrategia de tomada de tempo
+void mapeamento();          //estrategia de mapeamento
 //---------------------------------------------------------------//
 void parada();              //Leitura dos sensores laterais
 void fim_de_pista();        //verifica se é o fim da pista 
