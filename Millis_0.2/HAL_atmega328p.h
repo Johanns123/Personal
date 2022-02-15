@@ -1,17 +1,17 @@
-/*Bibliotecas e frequência do uc*/
+/*Bibliotecas e frequencia do uc*/
 #define F_CPU 16000000        //define a frequencia do uC para 16MHz
 #include <avr/io.h>           //Biblioteca geral dos AVR
-#include <avr/interrupt.h>    //Biblioteca de interrupção
+#include <avr/interrupt.h>    //Biblioteca de interrupcao
 #include <util/delay.h>
 #include "ADC.h"
 #include "PWM.h"
 #include "UART.h"
 
 
-//variáveis de comando para os registradores
-#define set_bit(y,bit) (y|=(1<<bit)) //coloca em 1 o bit x da variável Y
-#define clr_bit(y,bit) (y&=~(1<<bit)) //coloca em 0 o bit x da variável Y
-#define cpl_bit(y,bit) (y^=(1<<bit)) //troca o estado lógico do bit x da variável Y
+//variaveis de comando para os registradores
+#define set_bit(y,bit) (y|=(1<<bit)) //coloca em 1 o bit x da variavel Y
+#define clr_bit(y,bit) (y&=~(1<<bit)) //coloca em 0 o bit x da variavel Y
+#define cpl_bit(y,bit) (y^=(1<<bit)) //troca o estado logico do bit x da variavel Y
 #define tst_bit(y,bit) (y&(1<<bit)) //retorna 0 ou 1 conforme leitura do bit
 /*==============================================================*/
 
@@ -30,3 +30,5 @@
 void setup_Hardware();
 void INT_INIT();
 void EXT_INIT();
+void enable_interrupts(void);
+void disable_interrupts(void);
