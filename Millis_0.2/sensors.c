@@ -4,19 +4,26 @@
 #include "PWM.h"
 #include "motores.h"
 
-#define PID_X       // Ao comentar o PID rotacional é desabilitado
+#define PID_X       // Ao comentar o PID translacional e desabilitado
 #define atmega328p
 
+#define frontais 1
+#define encoders 2
+
 // =============================================================================================
-// Variaveis globais
+// == Variaveis globais ==
+// =======================
+
+extern unsigned char SW;                    // Switch de estratégias
 
 unsigned char sensores_de_tensao [2];
-unsigned char v_bat;                 // Tensão na bateria
-extern unsigned char SW;                    // Switch de estratégias
-unsigned char sensores_frontais = 0;
+unsigned char v_bat;                        // Tensão na bateria
+unsigned char sensores_frontais = 0,
+              sensores_laterais = 0;        // NEW
 
 // =============================================================================================
-// Desenvolvimento de funcoes da biblioteca sensores.h
+// ====             Desenvolvimento de funcoes da biblioteca sensores.h                      ===
+// =============================================================================================
 
 void sensors_ADC_maq () /* leitura de tensão da bateria e do switch de estratégias 
                          * em que seu sinal será digitalizado */
@@ -46,7 +53,7 @@ void sensors_ADC_maq () /* leitura de tensão da bateria e do switch de estratégi
         case 1:
             estado = 0;
             sensores_de_tensao[1] = ADC_ler();
-            v_bat = sensores_de_tensao[1];      //sensor de tensão de bateria
+            v_bat = sensores_de_tensao[1];      //sensor de tensao de bateria
             ADC_conv_ch(6);
             break;
             
@@ -60,63 +67,75 @@ void sensors_ADC_maq () /* leitura de tensão da bateria e do switch de estratégi
     
 } /* end ADC_maq */
 
-
-
 void sensors_laterais(void)
 {
-    // Variaveis tipo flag
+//  =============================================================================================
+//  == Area de pre compilacao ==
+//  ============================
     
-    extern bool flag_curva;
-    extern bool flag_parada;
-    extern bool flag;
-    static bool flag_count = 0;
-    static bool s_curva = 0, s_parada = 0;
+    #ifdef atmega328p
     
-    // =============================================================================================
-    // Desenvolvimento
+        sensores_laterais = PINB & 0b00011000; // NEW : LEITURA SOMENTE DOS PINOS PB3 E PB4
     
-    s_curva =  (tst_bit(leitura_sensores, sensor_de_curva) >> sensor_de_curva);//lê valor do sensor de curva
-
-    /* Utilizar as leituras numa função e guradá-los num char e seus últimos valores realizar
-     * uma comparação para ver a condição em que o robô está */
+    #endif
     
-    s_parada = (tst_bit(leitura_sensores, sensor_de_parada) >> sensor_de_parada);//lê valor do sensor de parada
+//  =============================================================================================
+//  == Variaveis tipo flag ==
+//  =========================
     
-    // Testes dos sensores laterais
+    extern void fim_de_pista(); // usada na main.c
+        
+    extern bool flag_curva;     // usada em dados.c
+    extern bool flag_parada;    // usada em dados.c
     
-    if ((s_curva) && (!s_parada) && !flag_count) // Verifica se é uma parada
+    static bool flag_count = 0; // para nao ler duas vezes o mesmo marcador
+    
+//  =============================================================================================
+//  == Testes dos sensores laterais ==
+//  ==================================
+    
+    switch(sensores_laterais)
     {
-        flag = 1;
-        flag_count = 1;
-        flag_parada = 1;
-        flag_curva = 0;
-        set_bit(PORTB, led_placa);
-    }
-
-    else if ((!s_curva) && (!s_parada)) // Verifica se é cruzamento
-    {
-        flag = 0;
-        flag_count = 1;
-        flag_curva = 0;
-        clr_bit(PORTB, led_placa);
-    }
-
-    else if ((s_curva) && (s_parada)) // Nao le marcador
-    {
-        flag = 0;
-        flag_count = 0;
-        flag_curva = 0;
-        clr_bit(PORTB, led_placa);
-    }
-    else if (!(s_curva) && (s_parada) && !flag_curva) // Verifica se é uma curva
-    {
-        flag = 0;
-        flag_count = 0;
-        flag_curva = 1;
-        clr_bit(PORTB, led_placa);
+        /* cruzamento  | 00 */
+        case  0: 
+  
+            flag_count = 1;
+            flag_curva = 0;
+            clr_bit(PORTB, led_placa);
+            break;
+        
+        /* curva | 01 */
+        case  8:  
+            
+            if(flag_curva) return;
+            flag_count = 1;
+            flag_curva = 1;
+            clr_bit(PORTB, led_placa);           
+            
+            break;
+        
+        /* parada | 10 */ 
+        case 16: 
+           
+            if(flag_count) return;
+            fim_de_pista();
+            flag_count  = 1;
+            flag_parada = 1;
+            flag_curva  = 0;
+            set_bit(PORTB, led_placa);
+            break;
+        
+        /* sem marcador | 11 */
+        case 24:  
+            
+            flag_count = 0;
+            flag_curva = 0;
+            clr_bit(PORTB, led_placa);
+            break;
+            
     }
     
-} /* end sensors_le_marcadores */
+} /* end sensors_laterais */
 
 void sensors_sentido_de_giro()
 {   
@@ -125,45 +144,40 @@ void sensors_sentido_de_giro()
     extern unsigned int PWMA, PWMB;
     extern unsigned int PWMR;                               // PWM do motor ao entrar na reta
     extern unsigned int PWM_Curva;                          // PWM do motor ao entrar na curva
+    
     // ---> Área do senstido de giro <---
     
     static          int u_W = 0;                            // resultado do PID rotacional
     static          int u_X = 0;                            // resultado do PID translacional
     
-
     static unsigned int PWM_general = 0;
        
     static int  delta_enc = 0, erroX = 0, speedX;           // speedX é o setpoint da vel. desejada
     extern char pulse_numberL, pulse_numberR;               // numero de pulsos do dois encoders       
     static int  erro_sensores = 0, erroW = 0, speedW = 0;   // speeW é o setpoint do PID rotacional.
     
-    
-    
     speedX = 100;   // Velocidade/PWM desejado
-    
-    // =============================================================================================
-    // Desenvolvimento 
-    
-    // Aréa de pré-compilação
-    
-    #ifdef atmega328p
-    
-    sensores_frontais = PINC & 0b00011111;   /* Apago somente os 3 bits mais significativos
-                                              * para ler os 5 LSBs */
-    #endif
         
-    sensors_frontais(&erro_sensores, &speedW, &speedX, &PWM_general, &PWMR, &PWM_Curva);
-    
-    #ifdef PID_X                                /* caso não seja definido, u_X será sempre 0
-                                                 * variação entro os dois enconders */
-    delta_enc = pulse_numberR + pulse_numberL;   
-    erroX = speedX - delta_enc; // Variável de processo (PV)
-    u_X   = PID_encoder(erroX); // Variável manipulada  (MV)
+//  =============================================================================================
+//  == Area de pre compilacao ==
+//  ============================
+               
+    #ifdef PID_X                                    /* caso não seja definido, u_X será sempre 0
+                                                     * variação entro os dois enconders */
+        delta_enc = pulse_numberR + pulse_numberL;   
+        erroX = speedX - delta_enc; // Variável de processo (PV)
+        u_X   = PID(erroX, encoders); // Variável manipulada  (MV)
     
     #endif 
+
+    sensors_frontais(&erro_sensores, &speedW, &speedX, &PWM_general, &PWMR, &PWM_Curva);
     
-    erroW = speedW - erro_sensores; // Calculo do erro rotacional
-    u_W = PID(erroW);               // Envia o erro para ser calculada a variável de correcao em PID()
+//  =============================================================================================
+//  == Desenvolvimento ==
+//  =====================
+    
+    erroW = speedW - erro_sensores;   // Calculo do erro rotacional
+    u_W   = PID(erroW, frontais);               // Envia o erro para ser calculada a variável de correcao em PID()
     
     PWMA = PWM_general + u_W + u_X; // Valores de correcao "u_W" e "u_X" calculados e atualizando o PWMA
     PWMB = PWM_general - u_W + u_X; // Valores de correcao "u_W" e "u_X" calculados e atualizando o PWMB
@@ -185,6 +199,21 @@ void sensors_sentido_de_giro()
 
 void sensors_frontais(int *erro_sensores, int *speedW, int *speedX, unsigned int *PWM_general, unsigned int *PWMR, unsigned int *PWM_Curva)
 {
+    
+//  =============================================================================================
+//  == Area de pre compilacao ==
+//  ============================
+    
+    #ifdef atmega328p
+    
+        sensores_frontais = PINC & 0b00011111;   /* Apago somente os 3 bits mais significativos
+                                                  * para ler os 5 LSBs */
+    #endif
+   
+//  =============================================================================================
+//  == Desenvolvimento ==
+//  =====================
+        
     /* foi feito um switch case com base em alguns casos que os sensores frontais
      * poderiam se encontrar. Os valores de leituras do vetor de sensores foi convertido 
      * em digital, mais tarde será feito uma imagem mostrando os caso de forma mais visível */
@@ -213,7 +242,7 @@ void sensors_frontais(int *erro_sensores, int *speedW, int *speedX, unsigned int
         case 14 :                       // volta pra pista, gira em torno do próprio eixo
             *erro_sensores = 8;
             #ifdef PID_X 
-            *speedX = 0;
+                *speedX = 0;
             #endif
             *PWM_general = *PWMR;
             motores_giro_direita();
@@ -254,7 +283,7 @@ void sensors_frontais(int *erro_sensores, int *speedW, int *speedX, unsigned int
         case 28 :
             *erro_sensores = -6;
             #ifdef PID_X 
-            *speedX = 0;
+                *speedX = 0;
             #endif
             *PWM_general = *PWM_Curva;
             motores_frente();
@@ -263,10 +292,11 @@ void sensors_frontais(int *erro_sensores, int *speedW, int *speedX, unsigned int
         case 30 :                   //volta pra pista, gira em torno do próprio eixo
             *erro_sensores = -8;
             #ifdef PID_X 
-            *speedX = 0;
+                *speedX = 0;
             #endif
             *PWM_general = *PWMR; 
             motores_giro_esquerda();
             break;      
     }
-}
+
+} /* end sensors_frontais */
