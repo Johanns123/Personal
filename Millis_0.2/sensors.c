@@ -297,6 +297,11 @@ void sensors_frontais(int *erro_sensores, int *speedW, int *speedX, unsigned int
             *PWM_general = *PWMR; 
             motores_giro_esquerda();
             break;      
+            
+        default:
+            *PWM_general = *PWMR;
+            motores_frente();
+            break;
     }
 
 } /* end sensors_frontais */

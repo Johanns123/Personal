@@ -264,7 +264,7 @@ def Hata_modified():
     d = np.arange(0.12,10, 0.001)    ##varredura de 1km
  
     Pt_dB = 16.02                   ##Potência de transmissão
-    Gt_dBi = 0                      ##ganho de transmissão
+    Gt_dBi = 0                      ##ganho         de transmissão
     
     alpha = 1                       ##valor qnd menor que 20km
 
@@ -413,6 +413,72 @@ def modelo_Okumura_Hata_Cost_231():
 
     plt.show()
 
+def modelo_free_space_milimiter_wave():
+
+    Pt_dbm = 46.02  ##dbm = db + 30
+
+    Gt_db = -32.15
+    Gr_db = -27
+    '''dbi = dbm + 2.15
+       dbi = 3 + 2.15 = 5.15'''
+
+    f1 = 3000                 ##escala em MHz
+    f2 = 60000                ##escala em MHz
+    D = np.arange(1,10, 0.1)    ##até 10, unidade em km
+
+    L_db1 = 32.44 + 20*np.log10(f1) + 20*np.log10(D)
+
+    L_db2 = 32.44 + 20*np.log10(f2) + 20*np.log10(D)
+
+    Pr_dbm1 = Pt_dbm + Gt_db + Gr_db - L_db1
+    Pr_dbm2 = Pt_dbm + Gt_db + Gr_db - L_db2
+
+    ##plt.plot(D, L_db1, 'r--', D, L_db2, 'b-')
+    plt.plot(D, Pr_dbm1, 'r--', D, Pr_dbm2, 'b-')
+    plt.xlabel('Distância em kilômetros')
+    plt.ylabel('Sinal recebido (dB)')
+    plt.title('Modelo Espaço Livre ondas milimétricas')
+    plt.grid(True)
+
+    plt.show()
+
+def ABG_Model():
+    f = 3   ##freq. em GHz
+    d = np.arange(1.0, 200, 0.2)  ##ponto de partida, ponto de chegada e o passo, medida em metros
+
+    sigma = 3.76
+    mi = 0
+
+    alpha = 3.53
+    Betha = 22.4
+    Gamma = 2.13
+
+    X_abg = []
+    
+    for i in range(995):
+        gaussin_numbers = random.gauss(mi, sigma)
+        X_abg.append(gaussin_numbers)
+    
+   #X_abg = sigma * np.random.normal(1, len(d))
+
+    P_loss = 10*alpha*d + Betha + 10*Gamma*np.log10(f)## + X_abg
+
+
+    '''plt.subplot(211)
+    plt.plot(X_abg, '-b')
+    plt.subplot(212)
+    plt.hist(X_abg, bins = 10)
+    plt.show()'''
+
+    ##print(P_loss)
+
+    plt.plot(d, P_loss, 'r--')
+    plt.xlabel('Distância em metros')
+    plt.ylabel('Sinal recebido(dB)')
+    plt.title('Modelo ABG ondas milimétricas')
+    plt.grid(True)
+
+    plt.show()
 
 # função principal
 acabou = 0
@@ -423,7 +489,9 @@ while acabou == 0:
         input(
             "Modelo espaço livre - 1\nModelo log-normal - 2\nTwo Ray model - 3\n"
             "Modelo Okumura Hata - 4\nModelo Hata Modificado - 5\nModelo Okumura/Hata-Davidson - 6\n"
-            "Modelo_Okumura_Hata_Cost_231 - 7\n"            
+            "Modelo_Okumura_Hata_Cost_231 - 7\n"
+            "Modelo_free_space_milimiter_wave - 8\n"
+            "Modelo ABG - 9\n"            
         )
     )
 
@@ -449,6 +517,12 @@ while acabou == 0:
 
     elif opcao == 7:
         modelo_Okumura_Hata_Cost_231()
+
+    elif opcao == 8:
+        modelo_free_space_milimiter_wave()
+
+    elif opcao == 9:
+        ABG_Model()
 
     acabou = int(input("Tecle 0 para calcular novamente ou 1 para encerrar: "))
     # fim da função principal
