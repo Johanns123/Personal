@@ -13,12 +13,21 @@
 #define toggle_pin(reg,pin)  (reg ^= (1<<pin))
 #define test_pin(reg,pin)  (reg & (1<<pin))
 
+/*tempo = 65536 * Prescaler/Fosc = 65536 * 1024/16000000 = 4, 19s   
+ * tempo = X_bit_timer * Prescaler/Fosc
+ Valor inicial de contagem = 256 - tempo_desejado*Fosc/Prescaler = 256 - 0,01*16000000/1024 = 98,75 = 99
+ Valor inicial de contagem = X_bit_timer - tempo_desejado*Fosc/Prescaler*/
 
+void f_timers(void);
+void f_timer1(void);
+void ext_int(void);
 void setup(void);
 void loop(void);
 
 volatile char ch;
 volatile char flag_com;
+
+short int Max_timer1 = 0;
 
 char buffer [10] = {0};
 
@@ -34,6 +43,16 @@ ISR(ADC_vect)
   tratar_leitura_do_ADC();
 }
 
+ISR (TIMER0_OVF_vect)
+{
+  f_timers();
+}
+
+ISR(PCINT2_vect)
+{
+  ext_int();
+}
+
 int main()
 {
 
@@ -42,9 +61,23 @@ int main()
   return 0;
 }
 
+void f_timers()
+{
+  static unsigned short int counter1 = 1;
+
+  if(counter1 < Max_timer1) counter1++;
+
+  else
+  {
+    f_timer1();
+    counter1 = 1;
+  }
+
+}
+
 void setup() 
 {
-  DDRD = 0xff;
+  /*DDRD = 0xff;
   PORTD = 0x00;
   set_pin(DDRB, PB1);
   set_pin(DDRB, PB2);
@@ -57,12 +90,24 @@ void setup()
   TCCR1A = 0xA3; //Configura operacao em fast PWM, utilizando registradores OCR1x para comparacao
   setup_pwm_setFreq(11);
   sei();
-  tratar_leitura_do_ADC();
+  tratar_leitura_do_ADC();*/
+
+  DDRD = 0x0B;
+  PORTD = 0x04;
+  TCCR0B = 0x03;  //prescaler de 64
+  TCNT0 = 6;      //250 contagens gera 1ms de tempo
+  TIMSK0 = 0x01;  //habilito a interrupção do timer0
+  PCICR = 0x04;
+  PCMSK2 = 0x04;
+  Max_timer1 = 500;
+  sei();
 }
 
 void loop() 
 {
-  static unsigned char unidade, dezena, centena;
+  toggle_pin(PORTD, PD1);
+  _delay_ms(800);
+  /*static unsigned char unidade, dezena, centena;
   static int Volt;
 
   static float duty = 0;
@@ -73,7 +118,7 @@ void loop()
   dezena = (Volt%100)/10;
   unidade = Volt%10;
 
-  duty = (AD_pins[0]<<2) * 100.0/1023.0;
+  duty = (AD_pins[0]<<2) * 100.0/1023.0;*/
 
   /*static unsigned char counter = 0;
   static bool flag_bt = 0;
@@ -130,9 +175,34 @@ void loop()
   cmd_LCD(0xC0, 0); //desloca o cursor para a segunda linha
   escreve_LCD(buffer);*/
 
-  pwm_set_duty_service(AD_pins[0]<<2, PWM_CHANNEL_1);
+  /*pwm_set_duty_service(AD_pins[0]<<2, PWM_CHANNEL_1);
   pwm_set_duty_service(AD_pins[0]<<2, PWM_CHANNEL_2);
   sprintf(buffer, "%d.%d%d duty %3.2f%%", centena, dezena, unidade, duty);
   cmd_LCD(0xC0, 0); //desloca o cursor para a segunda linha
-  escreve_LCD(buffer);
+  escreve_LCD(buffer);*/
+}
+
+void f_timer1()
+{
+  toggle_pin(PORTD, PD0);
+}
+
+void ext_int(void)
+{
+  static bool flag_bt = 0;
+  static unsigned char read_bt = 0;
+
+  read_bt = test_pin(PIND, PD2);
+
+  if(!read_bt && flag_bt)
+  {
+    toggle_pin(PORTD, PD3);
+    flag_bt = 0;
+  }
+
+  else if(read_bt && !flag_bt)
+  {
+    flag_bt = 1;
+  }
+
 }
