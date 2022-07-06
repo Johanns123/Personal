@@ -45,11 +45,17 @@ void tratar_leitura_do_ADC(void)
   switch (estado) {
       
     case 0:
-      estado = 0;
+      estado = 1;
       AD_pins[0] = adc_read_service();
-      adc_conversion_ch_service(0);
+      adc_conversion_ch_service(1);
       break;
 
+    case 1 :
+      estado = 0;
+      AD_pins[1] = adc_read_service();
+      adc_conversion_ch_service(0);
+      break;
+      
     default:
       estado = 0;
       adc_conversion_ch_service(0);

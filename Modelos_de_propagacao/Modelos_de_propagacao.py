@@ -456,21 +456,13 @@ def ABG_Model():
     X_abg = []
     
     for i in range(995):
-        gaussin_numbers = random.gauss(mi, sigma)
+        gaussin_numbers = random.gauss(mi, sigma) * 1000
         X_abg.append(gaussin_numbers)
     
    #X_abg = sigma * np.random.normal(1, len(d))
 
-    P_loss = 10*alpha*d + Betha + 10*Gamma*np.log10(f)## + X_abg
+    P_loss = 10*alpha*d + Betha + 10*Gamma*np.log10(f) + X_abg
 
-
-    '''plt.subplot(211)
-    plt.plot(X_abg, '-b')
-    plt.subplot(212)
-    plt.hist(X_abg, bins = 10)
-    plt.show()'''
-
-    ##print(P_loss)
 
     plt.plot(d, P_loss, 'r--')
     plt.xlabel('Distância em metros')
@@ -479,6 +471,7 @@ def ABG_Model():
     plt.grid(True)
 
     plt.show()
+
 
 # função principal
 acabou = 0
@@ -491,7 +484,7 @@ while acabou == 0:
             "Modelo Okumura Hata - 4\nModelo Hata Modificado - 5\nModelo Okumura/Hata-Davidson - 6\n"
             "Modelo_Okumura_Hata_Cost_231 - 7\n"
             "Modelo_free_space_milimiter_wave - 8\n"
-            "Modelo ABG - 9\n"            
+            "Modelo ABG - 9\n"           
         )
     )
 
