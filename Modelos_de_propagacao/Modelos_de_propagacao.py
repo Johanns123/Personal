@@ -204,7 +204,7 @@ def two_ray_model():
 
 
 def modelo_Okumura_Hata():
-    f = 28000     ##28GHz       ##freq colocada em MHz
+    f = 2500     ##28GHz       ##freq colocada em MHz
     d = np.arange(1,10, 0.1)    ##até 20Km, unidade em Km
     hb = 30                     ##Altura da estação de base em m
     hm = 30                       ##Altura da estação móvel em m
@@ -230,12 +230,10 @@ def modelo_Okumura_Hata():
     L_50 = A+(B*np.log10(d))+C
 
     if L_50.all() < 0:
-        PL = Gt_dBi + Pt_dB + Gr_dBi + L_50
+        PL1 = Gt_dBi + Pt_dB + Gr_dBi + L_50
 
     if L_50.all() > 0:
-        PL = Gt_dBi + Pt_dB + Gr_dBi - L_50
-
-    plt.plot(d, PL, color= 'b', label= 'metropole')
+        PL1 = Gt_dBi + Pt_dB + Gr_dBi - L_50
 
     ##elif ambiente == 2:
     C = 0
@@ -246,13 +244,11 @@ def modelo_Okumura_Hata():
     L_50 = A+(B*np.log10(d))+C
 
     if L_50.all() < 0:
-        PL = Gt_dBi + Pt_dB + Gr_dBi + L_50
+        PL2 = Gt_dBi + Pt_dB + Gr_dBi + L_50
 
     if L_50.all() > 0:
-        PL = Gt_dBi + Pt_dB + Gr_dBi - L_50
-    
-    plt.plot(d, PL, color = 'r',  label= 'cidade pequena')
-    
+        PL2 = Gt_dBi + Pt_dB + Gr_dBi - L_50
+        
     ##elif ambiente == 3:
     aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
     C = -2*(np.log10(f/28))**2 - 5.4
@@ -262,13 +258,11 @@ def modelo_Okumura_Hata():
     L_50 = A+(B*np.log10(d))+C
 
     if L_50.all() < 0:
-        PL = Gt_dBi + Pt_dB + Gr_dBi + L_50
+        PL3 = Gt_dBi + Pt_dB + Gr_dBi + L_50
 
     if L_50.all() > 0:
-        PL = Gt_dBi + Pt_dB + Gr_dBi - L_50
+        PL3 = Gt_dBi + Pt_dB + Gr_dBi - L_50
     
-    plt.plot(d, PL, color= 'g', label= 'suburbio')
-
     ##elif ambiente == 4:
     aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
     C = -4.78*(np.log10(f))**2 + (18.33*np.log10(f)) - 40.98
@@ -279,21 +273,26 @@ def modelo_Okumura_Hata():
     L_50 = A+(B*np.log10(d))+C
     
     if L_50.all() < 0:
-        PL = Gt_dBi + Pt_dB + Gr_dBi + L_50
+        PL4 = Gt_dBi + Pt_dB + Gr_dBi + L_50
 
     if L_50.all() > 0:
-        PL = Gt_dBi + Pt_dB + Gr_dBi - L_50
+        PL4 = Gt_dBi + Pt_dB + Gr_dBi - L_50
     
-    plt.plot(d, PL, color= 'y', label= 'ambiente aberto')
+    
 
     ##A = 69.55 + (26.16*np.log10(f)) - (13.82*np.log10(hb)) - aHm
     ##B = 44.9 - (6.55*np.log10(hb))
     ##L_50 = A+(B*np.log10(d))+C
 
-    
+    plt.plot(d, PL1, color= 'b', label= 'metropole')
+    plt.plot(d, PL2, color = 'r',  label= 'cidade pequena')
+    plt.plot(d, PL3, color= 'g', label= 'suburbio')
+    plt.plot(d, PL4, color= 'y', label= 'ambiente aberto')
+
     plt.xlabel('Distância em kilômetros')
     plt.ylabel('Sinal recebido (dB)')
     plt.title('Modelo Okumura Hata')
+    plt.legend(['metropole', 'cidade pequena', 'suburbio', 'ambiente aberto'], loc=0)
     plt.grid(True)
 
     plt.show()
@@ -315,7 +314,7 @@ def Hata_modified():
     b_hb = (1.1*np.log10(f) - 0.7) * 10 - (1.56*np.log10(f) - 0.8) 
     + 20*np.log10(hb/10)
 
-    regiao = int(input("Determine o Local:\n1 - urbano\n2 - Suburbano\n3 - Área aberta\n"))
+    ##regiao = int(input("Determine o Local:\n1 - urbano\n2 - Suburbano\n3 - Área aberta\n"))
 
     ##L_50 = 0
     X = (44.9 - 6.55*np.log10(30))*(np.log10(d)**alpha)
@@ -323,30 +322,49 @@ def Hata_modified():
     L_50_urbano = 46.3 + 33.9*np.log10(2000) + 10*np.log10(f/2000) - 13.82*np.log10(30)
     - a_hm - b_hb
 
-    if regiao == 1:
-        L_50 = L_50_urbano
+    ##if regiao == 1:
+    L_50_1 = L_50_urbano
 
-    if regiao == 2:
-        L_50 = L_50_urbano - 2*(np.log10(2000/28)**2) - 5.4
+    ##if regiao == 2:
+    L_50_2 = L_50_urbano - 2*(np.log10(2000/28)**2) - 5.4
     
-    if regiao == 3:
-        L_50=  L_50_urbano - 4.78*(np.log(2000)**2) + 18.33*np.log10(2000) - 40.94
+    ##if regiao == 3:
+    L_50_3 =  L_50_urbano - 4.78*(np.log(2000)**2) + 18.33*np.log10(2000) - 40.94
     
     ##print(L_50)
 
-    L_50 += X       ##para normalizar as dimensões dos vetores no gráfico
+    L_50_1 += X       ##para normalizar as dimensões dos vetores no gráfico
 
-    if L_50.all() < 0:
-        PL = Gt_dBi + Pt_dB + L_50
+    L_50_2 += X
 
-    elif L_50.all() > 0:
-        PL = Gt_dBi + Pt_dB - L_50
+    L_50_3 += X
+    
+    if L_50_1.all() < 0:
+        PL1 = Gt_dBi + Pt_dB + L_50_1
 
+    elif L_50_1.all() > 0:
+        PL1 = Gt_dBi + Pt_dB - L_50_1
 
-    plt.plot(d, PL)
+    if L_50_2.all() < 0:
+        PL2 = Gt_dBi + Pt_dB + L_50_2
+
+    elif L_50_2.all() > 0:
+        PL2 = Gt_dBi + Pt_dB - L_50_2
+
+    if L_50_3.all() < 0:
+        PL3 = Gt_dBi + Pt_dB + L_50_3
+
+    elif L_50_3.all() > 0:
+        PL3 = Gt_dBi + Pt_dB - L_50_3
+
+    plt.plot(d, PL1, color= 'b', label= 'Região urbana')
+    plt.plot(d, PL2, color = 'r',  label= 'Subúrbio')
+    plt.plot(d, PL3, color= 'g', label= 'Ambiente aberto')
     plt.xlabel('Distância em Kilômetros')
     plt.ylabel('Sinal recebido (dB)')
     plt.title('Modelo Hata Modificado')
+    plt.legend(['Região urbana', 'suburbio', 'ambiente aberto'], loc=0)
+
     plt.grid(True)
 
     plt.show()
