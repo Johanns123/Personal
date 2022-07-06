@@ -215,30 +215,16 @@ def modelo_Okumura_Hata():
     Gt_dBi = 0                  ##ganho de transmissão
     Gr_dBi = 3      ##3dB
     
-    ambiente = int(input("Digite 1 para metrô, 2 para cidade pequena, 3 para subúrbio, 4 para ambiente aberto: "))
+    ##ambiente = int(input("Digite 1 para metrô, 2 para cidade pequena, 3 para subúrbio, 4 para ambiente aberto: "))
 
     PL = 0
 
-    if ambiente == 1:
-        C = 0
-        if f <= 200:
-            aHm = 8.29*(np.log10(1.54*hm))**2 - 1.11
-        else:
-            aHm = 3.2*(np.log10(11.75*hm))**2 - 4.97
-
-    elif ambiente == 2:
-        C = 0
-        aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
-
-    elif ambiente == 3:
-        aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
-        C = -2*(np.log10(f/28))**2 - 5.4
-
-    elif ambiente == 4:
-        aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
-        C = -4.78*(np.log10(f))**2 + (18.33*np.log10(f)) - 40.98
-
-
+    ##if ambiente == 1:
+    C = 0
+    if f <= 200:
+        aHm = 8.29*(np.log10(1.54*hm))**2 - 1.11
+    else:
+        aHm = 3.2*(np.log10(11.75*hm))**2 - 4.97
     A = 69.55 + (26.16*np.log10(f)) - (13.82*np.log10(hb)) - aHm
     B = 44.9 - (6.55*np.log10(hb))
     L_50 = A+(B*np.log10(d))+C
@@ -249,7 +235,62 @@ def modelo_Okumura_Hata():
     if L_50.all() > 0:
         PL = Gt_dBi + Pt_dB + Gr_dBi - L_50
 
-    plt.plot(d, PL)
+    plt.plot(d, PL, color= 'b', label= 'metropole')
+
+    ##elif ambiente == 2:
+    C = 0
+    aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
+
+    A = 69.55 + (26.16*np.log10(f)) - (13.82*np.log10(hb)) - aHm
+    B = 44.9 - (6.55*np.log10(hb))
+    L_50 = A+(B*np.log10(d))+C
+
+    if L_50.all() < 0:
+        PL = Gt_dBi + Pt_dB + Gr_dBi + L_50
+
+    if L_50.all() > 0:
+        PL = Gt_dBi + Pt_dB + Gr_dBi - L_50
+    
+    plt.plot(d, PL, color = 'r',  label= 'cidade pequena')
+    
+    ##elif ambiente == 3:
+    aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
+    C = -2*(np.log10(f/28))**2 - 5.4
+   
+    A = 69.55 + (26.16*np.log10(f)) - (13.82*np.log10(hb)) - aHm
+    B = 44.9 - (6.55*np.log10(hb))
+    L_50 = A+(B*np.log10(d))+C
+
+    if L_50.all() < 0:
+        PL = Gt_dBi + Pt_dB + Gr_dBi + L_50
+
+    if L_50.all() > 0:
+        PL = Gt_dBi + Pt_dB + Gr_dBi - L_50
+    
+    plt.plot(d, PL, color= 'g', label= 'suburbio')
+
+    ##elif ambiente == 4:
+    aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
+    C = -4.78*(np.log10(f))**2 + (18.33*np.log10(f)) - 40.98
+    
+
+    A = 69.55 + (26.16*np.log10(f)) - (13.82*np.log10(hb)) - aHm
+    B = 44.9 - (6.55*np.log10(hb))
+    L_50 = A+(B*np.log10(d))+C
+    
+    if L_50.all() < 0:
+        PL = Gt_dBi + Pt_dB + Gr_dBi + L_50
+
+    if L_50.all() > 0:
+        PL = Gt_dBi + Pt_dB + Gr_dBi - L_50
+    
+    plt.plot(d, PL, color= 'y', label= 'ambiente aberto')
+
+    ##A = 69.55 + (26.16*np.log10(f)) - (13.82*np.log10(hb)) - aHm
+    ##B = 44.9 - (6.55*np.log10(hb))
+    ##L_50 = A+(B*np.log10(d))+C
+
+    
     plt.xlabel('Distância em kilômetros')
     plt.ylabel('Sinal recebido (dB)')
     plt.title('Modelo Okumura Hata')
