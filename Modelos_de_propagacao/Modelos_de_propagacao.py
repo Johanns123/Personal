@@ -413,7 +413,7 @@ def modelo_Okumura_Hata_Davidson():
 
 def modelo_Okumura_Hata_Cost_231():
 
-    f = 28000                    ##freq. em MHz
+    f = 2500                    ##freq. em MHz
     d = np.arange(1,10, 0.1)    ##até 20, unidade em km
     hb = 30                     ##Altura da estação de base em m
     hm = 30                     ##Altura da estação móvel em m
@@ -427,47 +427,65 @@ def modelo_Okumura_Hata_Cost_231():
 
     aHm = 0
 
-    regiao = int(input("Determine o Local:\n1 - Pequenas e médias cidades\n2 - Cidades grandes\n\n"))
+    ##regiao = int(input("Determine o Local:\n1 - Pequenas e médias cidades\n2 - Cidades grandes\n\n"))
 
-    if regiao == 1:
-        if hm <= 10 or hm >= 1:
-            aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
+    ##if regiao == 1:
+    if hm <= 10 or hm >= 1:
+        aHm = (1.1*np.log10(f) - 0.7)*hm - (1.56*np.log10(f) - 0.8)
 
-    if regiao == 2:
-        if f <= 200*10**6:
-            aHm = (8.29*(np.log10(1.54*hm)**2) - 1.1)
+    ##if regiao == 2:
+    if f <= 200*10**6:
+        aHm = (8.29*(np.log10(1.54*hm)**2) - 1.1)
     
-        elif f >= 400*10**6:
-            aHm = (3.2*(np.log10(11.75*hm)**2) - 4.97)
+    elif f >= 400*10**6:
+        aHm = (3.2*(np.log10(11.75*hm)**2) - 4.97)
     
     L_50_urbano = 46.3 + 33.9*np.log10(f) - 13.82*np.log10(hb) - aHm 
     
-    option = int(input("Urbana - 1\nSuburbana - 2\nÁrea rural - 3\n"))
+    ##option = int(input("Urbana - 1\nSuburbana - 2\nÁrea rural - 3\n"))
 
+    ##if option == 1:
+    CM = 3
+    L_50 = L_50_urbano + CM
+    
+    L_50 +=  (44.9 - 6.55*np.log10(hb))*np.log10(d)
 
-    if option == 1:
-        CM = 3
-        L_50 = L_50_urbano + CM
+    if L_50.all() < 0:
+        PL1 = Gt_dBi + Pt_dB + L_50
 
-    elif option == 2:
-        L_50 = L_50_urbano - 2*(np.log10(f/28)**2) - 5.4
+    elif L_50.all() > 0:
+        PL1 = Gt_dBi + Pt_dB - L_50
 
-    elif option == 3:
-        L_50 = L_50_urbano - 4.78*(np.log10(f)**2) + 18.33*np.log10(f) - 40.94
-
+    ##elif option == 2:
+    L_50 = L_50_urbano - 2*(np.log10(f/28)**2) - 5.4
 
     L_50 +=  (44.9 - 6.55*np.log10(hb))*np.log10(d)
 
     if L_50.all() < 0:
-        PL = Gt_dBi + Pt_dB + L_50
+        PL2 = Gt_dBi + Pt_dB + L_50
 
     elif L_50.all() > 0:
-        PL = Gt_dBi + Pt_dB - L_50
+        PL2 = Gt_dBi + Pt_dB - L_50
 
-    plt.plot(d, PL)
-    plt.xlabel('Distância em kilômetros')
+
+    ##elif option == 3:
+    L_50 = L_50_urbano - 4.78*(np.log10(f)**2) + 18.33*np.log10(f) - 40.94
+
+    L_50 +=  (44.9 - 6.55*np.log10(hb))*np.log10(d)
+
+    if L_50.all() < 0:
+        PL3 = Gt_dBi + Pt_dB + L_50
+
+    elif L_50.all() > 0:
+        PL3 = Gt_dBi + Pt_dB - L_50
+
+    plt.plot(d, PL1, color= 'b', label= 'Região urbana')
+    plt.plot(d, PL2, color = 'r', label= 'Subúrbio')
+    plt.plot(d, PL3, color= 'g', label= 'Área rural')
+    plt.xlabel('Distância em Kilômetros')
     plt.ylabel('Sinal recebido (dB)')
-    plt.title('Modelo Okumura-Hata COST 231')
+    plt.title('Modelo Okumura-Hata COST231')
+    plt.legend(['Região urbana', 'suburbio', 'Área rural'], loc=0)
     plt.grid(True)
 
     plt.show()
