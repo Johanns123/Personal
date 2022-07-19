@@ -1,5 +1,11 @@
 #include "PWM.h"
 
+void PWM_init(void)
+{
+  TCCR1A = 0xA3; //Configura operacao em fast PWM, utilizando registradores OCR1x para comparacao
+
+}
+
 void setup_pwm_setFreq(char option) 
 {
     /*

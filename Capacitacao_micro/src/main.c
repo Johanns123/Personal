@@ -1,42 +1,8 @@
-#include <avr/io.h>
-#include <util/delay.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <avr/interrupt.h>
-#include "uart.h"
-#include "ADC.h"
-#include "Display.h"
-#include "PWM.h"
+#include "main.h"
 
-#define set_pin(reg,pin)  (reg |= (1<<pin))
-#define clear_pin(reg,pin)  (reg &= ~(1<<pin))
-#define toggle_pin(reg,pin)  (reg ^= (1<<pin))
-#define test_pin(reg,pin)  (reg & (1<<pin))
-
-
-void setup(void);
-void loop(void);
-
-volatile char ch;
-volatile char flag_com;
-
-char buffer [10] = {0};
-
-ISR(USART_RX_vect)
-{
-  ch  = UDR0;
-  uart_caractere_sending_service(ch);
-  flag_com = 1;
-}
-
-ISR(ADC_vect)
-{
-  tratar_leitura_do_ADC();
-}
 
 int main()
 {
-
   setup();
   while (1) loop();
   return 0;
@@ -44,95 +10,80 @@ int main()
 
 void setup() 
 {
-  DDRD = 0xff;
+  DDRD = 0x1e;  //0b0001 1110 - PD1, PD2, PD3, PD4 como saida e PD5 como entrada
   PORTD = 0x00;
-  set_pin(DDRB, PB1);
-  set_pin(DDRB, PB2);
-  set_pin(DDRB, PB3);
-  set_pin(DDRB, PB5);
-  //uart_setup(16); //se colocar display no PD0 comentar esta linha
-  adc_setup();
-  inic_LCD_4bits();
-  escreve_LCD("  Voltimetro");
-  TCCR1A = 0xA3; //Configura operacao em fast PWM, utilizando registradores OCR1x para comparacao
-  setup_pwm_setFreq(11);
-  sei();
+  DDRB = 0xff;  //defino tudo como saida
+  DDRC = 0x00;  //todos os pinos como saida
+  TCCR0B = 0x03;  //prescaler de 64
+  TCNT0 = 6;      //inicio a contar em 6 para um tempo de 1ms
+  TIMSK0 = 0x01;
+  PCICR = 0x04;  //habilito PCINT2
+  PCMSK2 = 0x20; //habilito o pino PCINT21 do PCINT2  
+  MaxTimer1 = 200;
+  MaxTimer2 = 10;
+  uart_setup(16);           //se colocar display no PD0 comentar esta linha
+  adc_setup();              //configuro o conversor AD
+  PWM_init();               //inicializo o PWM
+  setup_pwm_setFreq(11);    //freq de 250Hz
   tratar_leitura_do_ADC();
+  sei();
 }
 
 void loop() 
 {
-  static unsigned char unidade, dezena, centena;
-  static int Volt;
+  toggle_bit(PORTD, PD2);
+  _delay_ms(500);
+}
 
-  static float duty = 0;
+void contador(void)
+{
+  static unsigned char contador1 = 1, contador2 = 1;
 
-  Volt = (500.0*AD_pins[0])/255.0;
+  if(contador1 < MaxTimer1) contador1++;
 
-  centena = Volt/100;
-  dezena = (Volt%100)/10;
-  unidade = Volt%10;
-
-  duty = (AD_pins[0]<<2) * 100.0/1023.0;
-
-  /*static unsigned char counter = 0;
-  static bool flag_bt = 0;
-  static bool read_bt = 0;
-  static bool option = 0;
-  static char buffer [10] = {0};
-
-  read_bt = test_pin(PINB, PB0);
-
-  if(!read_bt && !flag_bt)
+  else
   {
-    if(!option)
-    {
-      option = 1;
-    }
-    else  option = 0;
-    
+    contador1 = 1;
+    rotina1();
+  }
+
+  if(contador2 < MaxTimer2) contador2++;
+
+  else
+  {
+    contador2 = 1;
+    rotina2();
+  }
+}
+
+void rotina1()
+{
+  toggle_bit(PORTD, PD3);
+}
+
+void rotina2(void)
+{
+
+  pwm_set_duty_service(AD_pins[0], PWM_CHANNEL_2);
+  sprintf(buffer, "%d\n", AD_pins[0]);
+  uart_string_sending_service(buffer);
+}
+
+void read_key(void)
+{
+  static bool flag_bt = 0;
+  static unsigned char button = 0;
+
+  button = test_bit(PIND, PD5);
+
+  if(button && !flag_bt)
+  {
     flag_bt = 1;
   }
 
-  else if(read_bt && flag_bt)
+  else if (!button && flag_bt)
   {
     flag_bt = 0;
+    toggle_bit(PORTD, PD4);
   }
-
-  if(!option)
-  {
-    PORTD = counter;
-    _delay_ms(400);
-  }
-  
-  else 
-  {*/
-    /*if(counter%2)
-    {
-      PORTD = 170;
-    }
-
-    else
-    {
-      PORTD = 85;
-    }*/
-    /*PORTD = AD_pins[0];
-    sprintf(buffer, "%d\n", AD_pins[0]);
-    uart_string_sending_service(buffer);
-    _delay_ms(1);
-  }
-  counter++;*/
-  /*static float Volt = 0;
-
-  Volt = ((5.0*AD_pins[0])/255.0);
-
-  sprintf(buffer, "  %.2f", Volt);
-  cmd_LCD(0xC0, 0); //desloca o cursor para a segunda linha
-  escreve_LCD(buffer);*/
-
-  pwm_set_duty_service(AD_pins[0]<<2, PWM_CHANNEL_1);
-  pwm_set_duty_service(AD_pins[0]<<2, PWM_CHANNEL_2);
-  sprintf(buffer, "%d.%d%d duty %3.2f%%", centena, dezena, unidade, duty);
-  cmd_LCD(0xC0, 0); //desloca o cursor para a segunda linha
-  escreve_LCD(buffer);
 }
