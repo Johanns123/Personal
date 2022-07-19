@@ -520,7 +520,7 @@ def modelo_free_space_milimiter_wave():
     plt.show()
 
 def ABG_Model():
-    f = 3   ##freq. em GHz
+    f = 28   ##freq. em GHz
     d = np.arange(1.0, 200, 0.2)  ##ponto de partida, ponto de chegada e o passo, medida em metros
 
     sigma = 3.76
