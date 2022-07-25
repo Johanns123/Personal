@@ -4,3 +4,4 @@
 
 void setup_pwm_setFreq(char option);
 void pwm_set_duty_service(unsigned int duty, unsigned char channel);
+void PWM_init(void);
