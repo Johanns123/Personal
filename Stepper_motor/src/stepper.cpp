@@ -1,4 +1,4 @@
-#include "stepper.h"
+#include "stepper.hpp"
 
 
 uint8_t vect_steps_full_step_hard[4] = {0x90, 0x30, 0x60, 0xc0};
@@ -10,98 +10,47 @@ uint16_t contador = 0;
 uint16_t local_counter = 0;
 bool finish = 0;
 
-void set_stepper_motor_mode(uint8_t mode)
+void Stepper::set_stepper_motor_mode(uint8_t mode)
 {
   switch (mode)
   {
   case 1:
-    passo_completo_alto_torque();
+    Stepper::passo_completo_alto_torque();
     break;
 
   case 2:
-    passo_completo_baixo_torque();
+    Stepper::passo_completo_baixo_torque();
     break;
   
   case 3:
-    meio_passo();
+    Stepper::meio_passo();
     break;
 
   default:
-    passo_completo_alto_torque();
+    Stepper::passo_completo_alto_torque();
     break;
   }
 }
 
 
-void passo_completo_alto_torque(void)
+void Stepper::passo_completo_alto_torque(void)
 {
   mode = 1;
 }
 
-void passo_completo_baixo_torque()
+void Stepper::passo_completo_baixo_torque()
 {
   mode = 2;
 }
 
-void meio_passo(void)
+void Stepper::meio_passo(void)
 {
 
   mode = 3;
 }
 
-void rotate_CCW()
-{
-  switch (mode)
-  {
-  case 1:
-    Full_torque();
-    sentido = COUNTERCLOCKWISE;
-    break;
-  
 
-  case 2:
-    Half_torque();
-    sentido = COUNTERCLOCKWISE;
-    break;
-
-
-  case 3:
-    High_precision();
-    sentido = COUNTERCLOCKWISE;
-    break;
-
-  default:
-    break;
-  }
-}
-
-void rotate_CW()
-{
-  switch (mode)
-  {
-  case 1:
-    Full_torque();
-    sentido = CLOCKWISE;
-    break;
-  
-
-  case 2:
-    Half_torque();
-    sentido = CLOCKWISE;
-    break;
-
-
-  case 3:
-    High_precision();
-    sentido = CLOCKWISE;
-    break;
-
-  default:
-    break;
-  }
-}
-
-void Full_torque(void)
+void Stepper::Full_torque(void)
 {
   static uint8_t step = 1;
 
@@ -165,7 +114,7 @@ void Full_torque(void)
   
 }
 
-void Half_torque(void)
+void Stepper::Half_torque(void)
 {
   static uint8_t step = 1;
 
@@ -229,7 +178,7 @@ void Half_torque(void)
   
 }
 
-void High_precision(void)
+void Stepper::High_precision(void)
 {
   static uint8_t step = 1;
 
@@ -334,7 +283,7 @@ void High_precision(void)
 }
 
 
-void select_angle(uint16_t angle, bool direction)
+void Stepper::select_angle(uint16_t angle, bool direction)
 {
     switch (mode)
     {
@@ -359,31 +308,56 @@ void select_angle(uint16_t angle, bool direction)
         sentido = CLOCKWISE;
 }
 
-bool run(void)
+bool Stepper::run(void)
 {   
     if(local_counter == contador)
     {   
         finish = 1;
         return finish;
     }
-    if(sentido == COUNTERCLOCKWISE)
-        rotate_CCW();
-
-    else
-        rotate_CW();  
+    
+    start_motor(sentido);
     
     local_counter++;
 
     return finish;
 }
 
-void clear()
+void Stepper::clear()
 {
     local_counter = 0;
     finish = 0;
 }
 
-void chose_speed(uint8_t time)
+uint8_t Stepper::chose_speed(uint8_t time)
 {
-    speed = time;
+    return time;
+}
+
+void Stepper::select_direction(uint8_t direction)
+{
+  sentido = direction;
+}
+
+void Stepper::start_motor(uint8_t direction)
+{ 
+  sentido = direction;
+  switch (mode)
+  {
+  case 1:
+    Stepper::Full_torque();
+    break;
+  
+  case 2:
+    Stepper::Half_torque();
+    break;
+
+
+  case 3:
+    Stepper::High_precision();
+    break;
+
+  default:
+    break;
+  }
 }
